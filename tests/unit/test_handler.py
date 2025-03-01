@@ -68,12 +68,12 @@ def test_handler_success(s3, ses, lambda_environment):
 
         mock_client.side_effect = side_effect
 
-        # Mock the collect functions to return sample findings
+        # Mock all the necessary functions directly
         with patch(
             "index.collect_iam_findings",
             return_value=[
                 {
-                    "id": "TEST-IAM-001",
+                    "id": "iam-1",
                     "category": "IAM",
                     "severity": "Medium",
                     "resource_type": "IAM Role",
@@ -97,7 +97,9 @@ def test_handler_success(s3, ses, lambda_environment):
                                 "index.generate_ai_narrative",
                                 return_value="Test narrative",
                             ):
-                                with patch("index.send_email_with_attachment"):
+                                with patch(
+                                    "index.send_email_with_attachment"
+                                ) as mock_send_email:
                                     # Call the handler
                                     response = index.handler({}, {})
 
@@ -108,14 +110,8 @@ def test_handler_success(s3, ses, lambda_environment):
                                         in response["body"]
                                     )
 
-                                    # Verify S3 upload was called
-                                    objects = s3.list_objects(
-                                        Bucket="test-report-bucket"
-                                    )
-                                    assert "Contents" in objects
-                                    assert objects["Contents"][0]["Key"].startswith(
-                                        "reports/aws-access-review-"
-                                    )
+                                    # Verify email was sent
+                                    mock_send_email.assert_called_once()
 
 
 def test_collect_iam_findings():

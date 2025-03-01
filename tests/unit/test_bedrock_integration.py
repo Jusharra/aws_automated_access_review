@@ -5,7 +5,9 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 # Add the lambda directory to the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
+)
 import bedrock_integration  # noqa: E402
 
 
