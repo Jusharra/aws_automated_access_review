@@ -39,10 +39,8 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
 - Creates detailed, timestamped reports for audit evidence
 - Integrates with compliance workflows:
   1. Receive monthly reports via email
-  2. Create tickets in your tracking system for any findings
-  3. Document remediation actions taken
-  4. Store reports as audit evidence
-  5. Present to auditors when they sample specific months during assessment
+  2. Store reports as audit evidence
+  3. Present to auditors when they sample specific months during assessment
 
 ## Features (So Far!)
 
