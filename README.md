@@ -1,10 +1,27 @@
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
 # AWS Automated Access Review
+## A Portfolio-Building Project for GRC Professionals
 
-> **For GRC Professionals & Portfolio Building**: This tool is designed for Governance, Risk, and Compliance (GRC) professionals to use in their organizations and for GRC engineers building their portfolios in test AWS accounts. 
->
+[![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
+
+Boost your GRC portfolio with this hands-on AWS security tool! Designed for Governance, Risk, and Compliance (GRC) professionals, this project lets you demonstrate practical cloud security skills—perfect for job applications, interviews, or career growth. Deploy it, generate professional IAM audit reports, and showcase your ability to tackle real-world compliance challenges.
+
 > **⚠️ DISCLAIMER**: This tool is provided as-is without warranty of any kind. While it has been tested in development environments, thorough validation is required before deploying in production. Always review the code, test in a non-production environment first, and ensure it meets your organization's security requirements and compliance standards.
+
+## Why This Project Matters for Your GRC Portfolio
+
+- **Showcase AWS Security Skills**: Prove you can audit IAM permissions using native AWS tools.
+- **Demonstrate Compliance Expertise**: Highlight your ability to identify and report on access risks (e.g., MFA gaps, public buckets).
+- **Produce Deliverables**: Generate polished reports (CSV + AI summaries) to impress employers or auditors.
+- **Learn Cloud Automation**: Gain hands-on experience with Lambda, SES, and CloudFormation—key GRC-adjacent skills.
+
+## What You'll Learn
+
+1. **IAM Security Basics**: Understand AWS access controls and common misconfigurations.
+2. **Compliance Reporting**: Create actionable security reports for stakeholders.
+3. **AI in GRC**: Use Amazon Bedrock to turn raw data into insights.
+4. **AWS Automation**: Deploy and manage a serverless security tool.
 
 ## About
 
@@ -29,12 +46,19 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
 
 ## Features
 
-- **IAM Security Assessment**: Identifies users without MFA, unused access keys, and overly permissive policies
-- **Security Hub Integration**: Collects and summarizes findings from AWS Security Hub
-- **IAM Access Analyzer**: Reports on resources with external access
-- **AI-Powered Analysis**: Uses Amazon Bedrock to generate human-readable summaries of findings
-- **Email Reporting**: Sends detailed reports with severity-based categorization
-- **Scheduled Execution**: Runs automatically on a configurable schedule
+- **IAM Audit Reports**: Generate detailed CSV reports of users without MFA, unused keys, and risky permissions—perfect for compliance portfolios.
+- **Security Hub Summaries**: Compile Security Hub findings into a single, shareable document.
+- **External Access Insights**: Document public resource risks with Access Analyzer outputs.
+- **AI-Enhanced Narratives**: Add Bedrock-generated summaries to impress with executive-ready analysis.
+- **Email Deliverables**: Receive polished reports via SES to showcase automated workflows.
+- **Scheduled Automation**: Demonstrate your ability to set up recurring compliance checks.
+
+## Sample Deliverables for Your Portfolio
+
+1. **IAM Compliance Report**: A CSV listing findings like "User sample-user lacks MFA" with severity ratings.
+   - Example: See `examples/sample-access-report.csv`.
+2. **Executive Summary**: An emailed AI narrative explaining key risks and fixes.
+3. **Deployment Write-Up**: Document your setup process (SES verification, CloudFormation) as a case study.
 
 ## Prerequisites
 
@@ -46,7 +70,13 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
   - Amazon SES (with verified email for receiving reports)
   - Amazon Bedrock (with access to Claude model)
 
-## 🚀 Get Started
+## 🚀 Portfolio Quickstart (No Coding Needed!)
+
+1. **Set Up AWS**: Verify an email in SES ([Guide](docs/email-setup.md)).
+2. **Deploy**: Run one command from the [Deployment Guide](docs/deployment.md).
+3. **Get Your Report**: Trigger a report and save the emailed CSV + summary.
+
+### Detailed Setup Steps
 
 1. Clone this repository:
    ```
@@ -77,7 +107,7 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
 
 4. **⚠️ IMPORTANT: Verify your email address by clicking the link in the verification email sent by AWS SES before proceeding!**
 
-5. (Optional) Run an immediate access review report:
+5. Run an immediate access review report:
    ```
    ./scripts/run_report.sh
    ```
@@ -171,7 +201,14 @@ Available options:
 - `--bucket`: S3 bucket name for reports (optional)
 - `--profile`: AWS profile to use for credentials
 
-## Customization
+## Customize for Your Portfolio
+
+Tailor this tool to stand out:
+- **Tune Reports**: Edit `src/lambda/index.py` to add your own risk categories.
+- **Style Emails**: Modify `deploy.sh` email templates for your branding.
+- **Document It**: Write a blog post about your deployment—link it in your resume!
+
+### Technical Customization Details
 
 You can customize the tool by modifying the following files:
 - `src/lambda/index.py`: Main Lambda function code
@@ -235,6 +272,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Authors
 
 See the AUTHORS.md file for a list of contributors to this project.
+
+## More GRC Portfolio Tools
+
+Level up with my other project:  
+- [security-hub-compliance-analyzer](https://github.com/ajy0127/security-hub-compliance-analyzer): Multi-framework compliance with SOC 2 and NIST 800-53 cATO monitoring.
 
 ## Product Requirements Document
 

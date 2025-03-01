@@ -1,0 +1,19 @@
+Finding ID,Severity,Resource Type,Resource Name,Description,Recommendation
+IAM-001,HIGH,IAM User,admin-user1,Administrator user without MFA enabled,Enable MFA for this administrator user immediately
+IAM-002,HIGH,IAM User,dev-admin,Administrator user without MFA enabled,Enable MFA for this administrator user immediately
+IAM-003,CRITICAL,IAM User,root,Root account has active access key,Delete root account access keys - use IAM users instead
+S3-001,HIGH,S3 Bucket,customer-data-bucket-prod,Bucket allows public read access,Remove public access settings from this bucket
+IAM-004,MEDIUM,IAM Role,dev-role-1,Role unused for more than 90 days,Review and remove if no longer needed
+IAM-005,MEDIUM,IAM Role,dev-role-2,Role unused for more than 90 days,Review and remove if no longer needed
+IAM-006,MEDIUM,IAM Role,dev-role-3,Role unused for more than 90 days,Review and remove if no longer needed
+IAM-007,MEDIUM,IAM Role,dev-role-4,Role unused for more than 90 days,Review and remove if no longer needed
+IAM-008,MEDIUM,IAM Role,dev-role-5,Role unused for more than 90 days,Review and remove if no longer needed
+IAM-009,LOW,IAM User,developer1,User has not rotated access key in 90+ days,Rotate access keys regularly (every 90 days)
+IAM-010,LOW,IAM User,developer2,User has not rotated access key in 90+ days,Rotate access keys regularly (every 90 days)
+IAM-011,LOW,IAM User,developer3,User has not rotated access key in 90+ days,Rotate access keys regularly (every 90 days)
+IAM-012,LOW,IAM User,data-analyst1,User has not rotated access key in 90+ days,Rotate access keys regularly (every 90 days)
+IAM-013,LOW,IAM User,data-analyst2,User has not rotated access key in 90+ days,Rotate access keys regularly (every 90 days)
+IAM-014,MEDIUM,IAM Policy,dev-policy-1,Policy allows wildcard resource access,Restrict policy to specific resources
+IAM-015,MEDIUM,IAM Policy,analytics-policy-1,Policy allows wildcard resource access,Restrict policy to specific resources
+S3-002,MEDIUM,S3 Bucket,logs-bucket-prod,Bucket missing encryption,Enable default encryption on the bucket
+S3-003,LOW,S3 Bucket,test-data-bucket,Bucket missing lifecycle policy,Configure lifecycle rules to manage storage costs
