@@ -57,7 +57,13 @@ def prepare_prompt(findings):
         str: Formatted prompt for the Claude model
     """
     # Count findings by severity
-    severity_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Informational": 0}
+    severity_counts = {
+        "Critical": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+        "Informational": 0,
+    }
 
     for finding in findings:
         if finding.get("severity") in severity_counts:
@@ -76,9 +82,16 @@ def prepare_prompt(findings):
     for category, category_findings in findings_by_category.items():
         findings_summary.append(f"\nCategory: {category}")
         # Sort by severity (Critical first)
-        severity_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3, "Informational": 4}
+        severity_order = {
+            "Critical": 0,
+            "High": 1,
+            "Medium": 2,
+            "Low": 3,
+            "Informational": 4,
+        }
         sorted_findings = sorted(
-            category_findings, key=lambda x: severity_order.get(x.get("severity", "Low"), 999)
+            category_findings,
+            key=lambda x: severity_order.get(x.get("severity", "Low"), 999),
         )
 
         for finding in sorted_findings[:5]:  # Limit to 5 findings per category

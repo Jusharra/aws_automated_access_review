@@ -69,7 +69,9 @@ class TestTitanModelIntegration(unittest.TestCase):
             "completion": "This is a test narrative.",
         }
         mock_bedrock.invoke_model.return_value = {
-            "body": MagicMock(read=MagicMock(return_value=json.dumps(mock_response).encode()))
+            "body": MagicMock(
+                read=MagicMock(return_value=json.dumps(mock_response).encode())
+            )
         }
 
         # Call the function

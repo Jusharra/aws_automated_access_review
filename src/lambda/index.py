@@ -114,7 +114,10 @@ def handler(event, context):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         csv_key = f"reports/aws-access-review-{timestamp}.csv"
         s3.put_object(
-            Bucket=report_bucket, Key=csv_key, Body=csv_buffer.getvalue(), ContentType="text/csv"
+            Bucket=report_bucket,
+            Key=csv_key,
+            Body=csv_buffer.getvalue(),
+            ContentType="text/csv",
         )
 
         # Generate AI narrative using Bedrock
@@ -129,7 +132,10 @@ def handler(event, context):
             f"aws-access-review-{timestamp}.csv",
         )
 
-        return {"statusCode": 200, "body": json.dumps("AWS Access Review completed successfully")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps("AWS Access Review completed successfully"),
+        }
 
     except Exception as e:
         error_msg = str(e)
@@ -196,7 +202,9 @@ def collect_iam_findings(iam):
                 key_created = key["CreateDate"]
 
                 # Check key age
-                key_age_days = (datetime.datetime.now(datetime.timezone.utc) - key_created).days
+                key_age_days = (
+                    datetime.datetime.now(datetime.timezone.utc) - key_created
+                ).days
 
                 if key_age_days > 90:
                     findings.append(
@@ -251,9 +259,13 @@ def collect_iam_findings(iam):
 
         for role in roles:
             role_name = role["RoleName"]
-            if "service-role/" not in role["Path"] and not role_name.startswith("AWSServiceRole"):
+            if "service-role/" not in role["Path"] and not role_name.startswith(
+                "AWSServiceRole"
+            ):
                 last_used_response = (
-                    iam.get_role(RoleName=role_name).get("Role", {}).get("RoleLastUsed", {})
+                    iam.get_role(RoleName=role_name)
+                    .get("Role", {})
+                    .get("RoleLastUsed", {})
                 )
                 if "LastUsedDate" not in last_used_response:
                     findings.append(
@@ -396,7 +408,8 @@ def collect_scp_findings(org):
                     "resource_id": "none",
                     "description": "No custom SCPs detected in the organization",
                     "recommendation": (
-                        "Implement SCPs to enforce security guardrails across the " "organization"
+                        "Implement SCPs to enforce security guardrails across the "
+                        "organization"
                     ),
                     "compliance": "AWS Well-Architected",
                     "detection_date": datetime.datetime.now().isoformat(),
@@ -538,7 +551,8 @@ def collect_scp_findings(org):
                 "resource_id": "error",
                 "description": f"Error analyzing SCPs: {error_msg}",
                 "recommendation": (
-                    "Check Lambda execution role permissions for Organizations ReadOnly " "access"
+                    "Check Lambda execution role permissions for Organizations ReadOnly "
+                    "access"
                 ),
                 "compliance": "N/A",
                 "detection_date": datetime.datetime.now().isoformat(),
@@ -559,7 +573,9 @@ def collect_securityhub_findings(securityhub):
 
     try:
         # Check if Security Hub is enabled by retrieving enabled standards
-        enabled_standards = securityhub.get_enabled_standards().get("StandardsSubscriptions", [])
+        enabled_standards = securityhub.get_enabled_standards().get(
+            "StandardsSubscriptions", []
+        )
 
         if not enabled_standards:
             findings.append(
@@ -605,7 +621,9 @@ def collect_securityhub_findings(securityhub):
                         "id": finding.get("Id", "")[-12:],
                         "category": "SecurityHub",
                         "severity": finding.get("Severity", {}).get("Label", "MEDIUM"),
-                        "resource_type": finding.get("Resources", [{}])[0].get("Type", ""),
+                        "resource_type": finding.get("Resources", [{}])[0].get(
+                            "Type", ""
+                        ),
                         "resource_id": finding.get("Resources", [{}])[0].get("Id", ""),
                         "description": finding.get("Description", ""),
                         "recommendation": finding.get("Remediation", {})
@@ -779,7 +797,8 @@ def collect_access_analyzer_findings(access_analyzer):
                 "resource_id": "error",
                 "description": f"Error collecting Access Analyzer findings: {error_msg}",
                 "recommendation": (
-                    "Check Lambda execution role permissions for Access Analyzer " "ReadOnly access"
+                    "Check Lambda execution role permissions for Access Analyzer "
+                    "ReadOnly access"
                 ),
                 "compliance": "N/A",
                 "detection_date": datetime.datetime.now().isoformat(),
@@ -990,7 +1009,13 @@ def generate_ai_narrative(bedrock, findings):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Count findings by severity
-        severity_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Informational": 0}
+        severity_counts = {
+            "Critical": 0,
+            "High": 0,
+            "Medium": 0,
+            "Low": 0,
+            "Informational": 0,
+        }
 
         # Count findings by category
         category_counts = {}
@@ -1027,7 +1052,9 @@ def generate_ai_narrative(bedrock, findings):
                 positives.append(f"- {finding.get('description')}")
 
         # Sort categories by count
-        sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+        sorted_categories = sorted(
+            category_counts.items(), key=lambda x: x[1], reverse=True
+        )
 
         # Build the narrative
         narrative = (
@@ -1056,7 +1083,8 @@ def generate_ai_narrative(bedrock, findings):
             )
             if len(key_issues) > 5:
                 narrative += (
-                    f"...and {len(key_issues) - 5} more critical or high severity " "issues.\n"
+                    f"...and {len(key_issues) - 5} more critical or high severity "
+                    "issues.\n"
                 )
 
         if positives:
@@ -1079,7 +1107,9 @@ def generate_ai_narrative(bedrock, findings):
         return narrative
 
 
-def send_email_with_attachment(ses_client, recipient_email, narrative, csv_content, filename):
+def send_email_with_attachment(
+    ses_client, recipient_email, narrative, csv_content, filename
+):
     """
     Send an email with a narrative and CSV attachment.
     """
@@ -1165,12 +1195,15 @@ def verify_email_for_ses(ses_client, email_address):
     """
     try:
         # Check if the email is already verified
-        response = ses_client.get_identity_verification_attributes(Identities=[email_address])
+        response = ses_client.get_identity_verification_attributes(
+            Identities=[email_address]
+        )
 
         # If the email is not in the response or not verified, send verification
         if (
             email_address not in response["VerificationAttributes"]
-            or response["VerificationAttributes"][email_address]["VerificationStatus"] != "Success"
+            or response["VerificationAttributes"][email_address]["VerificationStatus"]
+            != "Success"
         ):
             print(f"Email {email_address} not verified. Sending verification email...")
             ses_client.verify_email_identity(EmailAddress=email_address)

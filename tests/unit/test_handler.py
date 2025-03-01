@@ -85,10 +85,15 @@ def test_handler_success(s3, ses, lambda_environment):
         ):
             with patch("index.collect_scp_findings", return_value=[]):
                 with patch("index.collect_securityhub_findings", return_value=[]):
-                    with patch("index.collect_access_analyzer_findings", return_value=[]):
-                        with patch("index.collect_cloudtrail_findings", return_value=[]):
+                    with patch(
+                        "index.collect_access_analyzer_findings", return_value=[]
+                    ):
+                        with patch(
+                            "index.collect_cloudtrail_findings", return_value=[]
+                        ):
                             with patch(
-                                "index.generate_ai_narrative", return_value="Test narrative"
+                                "index.generate_ai_narrative",
+                                return_value="Test narrative",
                             ):
                                 with patch("index.send_email_with_attachment"):
                                     # Call the handler
@@ -102,7 +107,9 @@ def test_handler_success(s3, ses, lambda_environment):
                                     )
 
                                     # Verify S3 upload was called
-                                    objects = s3.list_objects(Bucket="test-report-bucket")
+                                    objects = s3.list_objects(
+                                        Bucket="test-report-bucket"
+                                    )
                                     assert "Contents" in objects
                                     assert objects["Contents"][0]["Key"].startswith(
                                         "reports/aws-access-review-"
@@ -202,7 +209,9 @@ class TestHandler(unittest.TestCase):
         mock_collect_access_analyzer_findings.return_value = [
             {"id": "aa-1", "category": "Access Analyzer"}
         ]
-        mock_collect_cloudtrail_findings.return_value = [{"id": "ct-1", "category": "CloudTrail"}]
+        mock_collect_cloudtrail_findings.return_value = [
+            {"id": "ct-1", "category": "CloudTrail"}
+        ]
         mock_collect_scp_findings.return_value = [{"id": "scp-1", "category": "SCP"}]
 
         # Mock the narrative and report
@@ -271,7 +280,9 @@ class TestIAMFindings(unittest.TestCase):
         }
         mock_iam.get_policy_version.return_value = {
             "PolicyVersion": {
-                "Document": {"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}
+                "Document": {
+                    "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+                }
             }
         }
 
@@ -332,7 +343,9 @@ class TestAccessAnalyzerFindings(unittest.TestCase):
         # Mock the Access Analyzer responses
         mock_analyzer.list_analyzers.return_value = {
             "analyzers": [
-                {"arn": "arn:aws:access-analyzer:us-east-1:123456789012:analyzer/test-analyzer"}
+                {
+                    "arn": "arn:aws:access-analyzer:us-east-1:123456789012:analyzer/test-analyzer"
+                }
             ]
         }
         mock_analyzer.list_findings.return_value = {
