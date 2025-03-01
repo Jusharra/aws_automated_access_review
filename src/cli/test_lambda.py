@@ -55,7 +55,8 @@ def main():
         from index import handler
     except ImportError:
         print(
-            "Error: Could not import the Lambda handler. Make sure the deployment directory contains index.py"
+            "Error: Could not import the Lambda handler. "
+            "Make sure the deployment directory contains index.py"
         )
         sys.exit(1)
 
