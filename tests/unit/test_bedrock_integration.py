@@ -1,12 +1,12 @@
-import unittest
 import json
+import os
+import sys
+import unittest
 from unittest.mock import patch, MagicMock
 
-import sys
-import os
-
+# Add the lambda directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
-import bedrock_integration
+import bedrock_integration  # noqa: E402
 
 
 class TestBedrockIntegration(unittest.TestCase):

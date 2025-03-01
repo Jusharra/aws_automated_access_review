@@ -1,15 +1,14 @@
-import json
 import os
+import sys
 import pytest
 import boto3
+import unittest
 from unittest.mock import patch, MagicMock
 from moto import mock_aws
 
-# Import the handler function from the Lambda code
-import sys
-
+# Add the lambda directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
-import index
+import index  # noqa: E402
 
 
 @pytest.fixture
@@ -203,9 +202,7 @@ class TestHandler(unittest.TestCase):
         mock_collect_access_analyzer_findings.return_value = [
             {"id": "aa-1", "category": "Access Analyzer"}
         ]
-        mock_collect_cloudtrail_findings.return_value = [
-            {"id": "ct-1", "category": "CloudTrail"}
-        ]
+        mock_collect_cloudtrail_findings.return_value = [{"id": "ct-1", "category": "CloudTrail"}]
         mock_collect_scp_findings.return_value = [{"id": "scp-1", "category": "SCP"}]
 
         # Mock the narrative and report
@@ -251,16 +248,31 @@ class TestIAMFindings(unittest.TestCase):
         mock_iam.list_roles.return_value = {"Roles": [{"RoleName": "test-role"}]}
         mock_iam.list_users.return_value = {"Users": [{"UserName": "test-user"}]}
         mock_iam.list_attached_role_policies.return_value = {
-            "AttachedPolicies": [{"PolicyName": "test-policy", "PolicyArn": "arn:aws:iam::123456789012:policy/test-policy"}]
+            "AttachedPolicies": [
+                {
+                    "PolicyName": "test-policy",
+                    "PolicyArn": "arn:aws:iam::123456789012:policy/test-policy",
+                }
+            ]
         }
         mock_iam.list_attached_user_policies.return_value = {
-            "AttachedPolicies": [{"PolicyName": "test-policy", "PolicyArn": "arn:aws:iam::123456789012:policy/test-policy"}]
+            "AttachedPolicies": [
+                {
+                    "PolicyName": "test-policy",
+                    "PolicyArn": "arn:aws:iam::123456789012:policy/test-policy",
+                }
+            ]
         }
         mock_iam.get_policy.return_value = {
-            "Policy": {"DefaultVersionId": "v1", "Arn": "arn:aws:iam::123456789012:policy/test-policy"}
+            "Policy": {
+                "DefaultVersionId": "v1",
+                "Arn": "arn:aws:iam::123456789012:policy/test-policy",
+            }
         }
         mock_iam.get_policy_version.return_value = {
-            "PolicyVersion": {"Document": {"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}}
+            "PolicyVersion": {
+                "Document": {"Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}
+            }
         }
 
         # Call the function
@@ -319,7 +331,9 @@ class TestAccessAnalyzerFindings(unittest.TestCase):
 
         # Mock the Access Analyzer responses
         mock_analyzer.list_analyzers.return_value = {
-            "analyzers": [{"arn": "arn:aws:access-analyzer:us-east-1:123456789012:analyzer/test-analyzer"}]
+            "analyzers": [
+                {"arn": "arn:aws:access-analyzer:us-east-1:123456789012:analyzer/test-analyzer"}
+            ]
         }
         mock_analyzer.list_findings.return_value = {
             "findings": [
