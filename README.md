@@ -1,20 +1,20 @@
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
 # AWS Automated Access Review
-## A Portfolio-Building Project for GRC Professionals
+## A GRC Portfolio Playground
 
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
-Boost your GRC portfolio with this hands-on AWS security tool! Designed for Governance, Risk, and Compliance (GRC) professionals, this project lets you demonstrate practical cloud security skills—perfect for job applications, interviews, or career growth. Deploy it, generate professional IAM audit reports, and showcase your ability to tackle real-world compliance challenges.
+Hey GRC folks! This is your sandbox to mess around with AWS IAM security—think of it as a portfolio-building side quest. It's a work in progress, so dive in, play with it, and make it yours. You'll end up with cool IAM audit reports and some legit cloud skills to brag about. No pressure, just adventure!
 
 > **⚠️ DISCLAIMER**: This tool is provided as-is without warranty of any kind. While it has been tested in development environments, thorough validation is required before deploying in production. Always review the code, test in a non-production environment first, and ensure it meets your organization's security requirements and compliance standards.
 
-## Why This Project Matters for Your GRC Portfolio
+## Why Tinker With This?
 
-- **Showcase AWS Security Skills**: Prove you can audit IAM permissions using native AWS tools.
-- **Demonstrate Compliance Expertise**: Highlight your ability to identify and report on access risks (e.g., MFA gaps, public buckets).
-- **Produce Deliverables**: Generate polished reports (CSV + AI summaries) to impress employers or auditors.
-- **Learn Cloud Automation**: Gain hands-on experience with Lambda, SES, and CloudFormation—key GRC-adjacent skills.
+- **Boost Your AWS Game**: Poke around IAM security without stress.
+- **Score Easy Wins**: Snag some reports to show off in interviews.
+- **Flex Your GRC Chops**: Spot access risks like a pro.
+- **Have Fun Automating**: Mess with Lambda and Bedrock—see what sticks!
 
 ## What You'll Learn
 
@@ -44,14 +44,16 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
   4. Store reports as audit evidence
   5. Present to auditors when they sample specific months during assessment
 
-## Features
+## Features (So Far!)
 
-- **IAM Audit Reports**: Generate detailed CSV reports of users without MFA, unused keys, and risky permissions—perfect for compliance portfolios.
-- **Security Hub Summaries**: Compile Security Hub findings into a single, shareable document.
-- **External Access Insights**: Document public resource risks with Access Analyzer outputs.
-- **AI-Enhanced Narratives**: Add Bedrock-generated summaries to impress with executive-ready analysis.
-- **Email Deliverables**: Receive polished reports via SES to showcase automated workflows.
-- **Scheduled Automation**: Demonstrate your ability to set up recurring compliance checks.
+- **IAM Audit Goodies**: Catch MFA gaps and sketchy permissions in a CSV.
+- **Security Hub Peek**: Summarize findings—more to come!
+- **External Access Flags**: Spot public stuff with Access Analyzer.
+- **AI Magic**: Bedrock spins raw data into readable bits (still tweaking this).
+- **Email Surprises**: Reports hit your inbox—fancy, right?
+- **Scheduled Magic**: Set it and forget it—automatic checks when you want them.
+
+*Note*: This is a growing toolkit—expect quirks and cool updates!
 
 ## Sample Deliverables for Your Portfolio
 
@@ -70,11 +72,11 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
   - Amazon SES (with verified email for receiving reports)
   - Amazon Bedrock (with access to Claude model)
 
-## 🚀 Portfolio Quickstart (No Coding Needed!)
+## Your First Adventure
 
-1. **Set Up AWS**: Verify an email in SES ([Guide](docs/email-setup.md)).
-2. **Deploy**: Run one command from the [Deployment Guide](docs/deployment.md).
-3. **Get Your Report**: Trigger a report and save the emailed CSV + summary.
+1. **Email Warm-Up**: Verify an email in SES (5 mins, see [this guide](docs/email-setup.md)).
+2. **Launch It**: Fire off one command from [here](docs/deployment.md)—boom, it's live!
+3. **Grab a Prize**: Run a report and snag your first CSV + summary.
 
 ### Detailed Setup Steps
 
@@ -201,12 +203,12 @@ Available options:
 - `--bucket`: S3 bucket name for reports (optional)
 - `--profile`: AWS profile to use for credentials
 
-## Customize for Your Portfolio
+## Make It Your Own
 
-Tailor this tool to stand out:
-- **Tune Reports**: Edit `src/lambda/index.py` to add your own risk categories.
-- **Style Emails**: Modify `deploy.sh` email templates for your branding.
-- **Document It**: Write a blog post about your deployment—link it in your resume!
+This is your playground—hack away!
+- **Tweak Reports**: Dive into `src/lambda/index.py` and add your spin.
+- **Fancy Up Emails**: Play with `deploy.sh` templates for fun.
+- **Share Your Story**: Blog your tweaks—level up your portfolio!
 
 ### Technical Customization Details
 
@@ -268,6 +270,10 @@ You can customize the tool by modifying the following files:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Join the Journey
+
+Got ideas? Found a bug? Just wanna chat GRC adventures? Hit me up on [LinkedIn](https://www.linkedin.com/in/ajyawn/) or toss thoughts in GitHub Issues. This is a WIP—let's build it together!
 
 ## Authors
 
