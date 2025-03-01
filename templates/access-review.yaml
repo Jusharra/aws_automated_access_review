@@ -28,7 +28,6 @@ Resources:
         - CreateBucketWithGeneratedName
         - !Ref 'AWS::NoValue'
         - !Ref ReportBucketName
-      AccessControl: Private
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -43,6 +42,23 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+
+  # S3 Bucket Policy for private access
+  ReportBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReportBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowOnlyAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 's3:*'
+            Resource: 
+              - !Sub 'arn:aws:s3:::${ReportBucket}'
+              - !Sub 'arn:aws:s3:::${ReportBucket}/*'
 
   # IAM Role for Lambda execution
   AccessReviewLambdaRole:
