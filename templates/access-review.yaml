@@ -1,0 +1,280 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Access Review - Automated security posture assessment and reporting'
+
+Parameters:
+  RecipientEmail:
+    Type: String
+    Description: Email address to receive security reports
+    
+  ScheduleExpression:
+    Type: String
+    Default: 'rate(7 days)'
+    Description: Schedule expression for running the access review (default: weekly)
+    
+  ReportBucketName:
+    Type: String
+    Default: ''
+    Description: Name for the S3 bucket to store reports (leave blank for auto-generated name)
+
+Conditions:
+  CreateBucketWithGeneratedName: !Equals [!Ref ReportBucketName, '']
+
+Resources:
+  # S3 Bucket for storing reports
+  ReportBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !If
+        - CreateBucketWithGeneratedName
+        - !Ref 'AWS::NoValue'
+        - !Ref ReportBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldReports
+            Status: Enabled
+            ExpirationInDays: 90
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # IAM Role for Lambda execution
+  AccessReviewLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AccessReviewPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # S3 permissions
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub ${ReportBucket.Arn}/*
+              
+              # IAM read permissions
+              - Effect: Allow
+                Action:
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:GetUser
+                  - iam:GetUserPolicy
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListAttachedUserPolicies
+                  - iam:ListPolicies
+                  - iam:ListRolePolicies
+                  - iam:ListRoles
+                  - iam:ListUserPolicies
+                  - iam:ListUsers
+                Resource: '*'
+              
+              # Organizations permissions (for SCPs and RCPs)
+              - Effect: Allow
+                Action:
+                  - organizations:DescribeOrganization
+                  - organizations:ListPolicies
+                  - organizations:DescribePolicy
+                  - organizations:ListTargetsForPolicy
+                Resource: '*'
+              
+              # Security Hub permissions
+              - Effect: Allow
+                Action:
+                  - securityhub:GetFindings
+                  - securityhub:GetInsights
+                Resource: '*'
+              
+              # IAM Access Analyzer permissions
+              - Effect: Allow
+                Action:
+                  - access-analyzer:ListAnalyzers
+                  - access-analyzer:ListFindings
+                  - access-analyzer:GetFinding
+                Resource: '*'
+              
+              # CloudTrail permissions
+              - Effect: Allow
+                Action:
+                  - cloudtrail:LookupEvents
+                Resource: '*'
+              
+              # Bedrock permissions
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: '*'
+              
+              # SES permissions
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+
+  # Lambda function for access review
+  AccessReviewLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-access-review
+      Handler: index.handler
+      Role: !GetAtt AccessReviewLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          REPORT_BUCKET: !Ref ReportBucket
+          RECIPIENT_EMAIL: !Ref RecipientEmail
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          import csv
+          import io
+          import datetime
+          
+          def handler(event, context):
+              print("Starting AWS Access Review")
+              
+              # Get environment variables
+              report_bucket = os.environ['REPORT_BUCKET']
+              recipient_email = os.environ['RECIPIENT_EMAIL']
+              
+              # Initialize AWS clients
+              iam = boto3.client('iam')
+              org = boto3.client('organizations')
+              securityhub = boto3.client('securityhub')
+              access_analyzer = boto3.client('accessanalyzer')
+              cloudtrail = boto3.client('cloudtrail')
+              bedrock = boto3.client('bedrock-runtime')
+              s3 = boto3.client('s3')
+              ses = boto3.client('ses')
+              
+              # Placeholder for findings collection
+              findings = []
+              
+              try:
+                  # TODO: Implement IAM policy analysis
+                  # TODO: Implement SCP analysis
+                  # TODO: Implement RCP analysis
+                  # TODO: Implement Security Hub findings collection
+                  # TODO: Implement IAM Access Analyzer findings collection
+                  # TODO: Implement CloudTrail log analysis
+                  
+                  # For now, just add a sample finding
+                  findings.append({
+                      'id': 'SAMPLE-001',
+                      'category': 'IAM',
+                      'severity': 'Medium',
+                      'resource_type': 'IAM Role',
+                      'resource_id': 'sample-role',
+                      'description': 'This is a sample finding for demonstration purposes',
+                      'recommendation': 'No action needed, this is just a sample',
+                      'compliance': 'CIS 1.2',
+                      'detection_date': datetime.datetime.now().isoformat()
+                  })
+                  
+                  # Generate CSV report
+                  csv_buffer = io.StringIO()
+                  csv_writer = csv.DictWriter(
+                      csv_buffer,
+                      fieldnames=['id', 'category', 'severity', 'resource_type', 'resource_id', 
+                                 'description', 'recommendation', 'compliance', 'detection_date']
+                  )
+                  csv_writer.writeheader()
+                  for finding in findings:
+                      csv_writer.writerow(finding)
+                  
+                  # Upload CSV to S3
+                  timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+                  csv_key = f'reports/aws-access-review-{timestamp}.csv'
+                  s3.put_object(
+                      Bucket=report_bucket,
+                      Key=csv_key,
+                      Body=csv_buffer.getvalue(),
+                      ContentType='text/csv'
+                  )
+                  
+                  # Generate AI narrative using Bedrock (placeholder)
+                  # TODO: Implement actual Bedrock integration
+                  narrative = f"""
+                  AWS Access Review Report - {timestamp}
+                  
+                  EXECUTIVE SUMMARY
+                  This is a placeholder for the AI-generated narrative that will be created using Amazon Bedrock.
+                  In the actual implementation, this will contain a detailed analysis of the security findings.
+                  
+                  FINDINGS SUMMARY
+                  Total findings: {len(findings)}
+                  
+                  For detailed findings, please see the attached CSV report.
+                  """
+                  
+                  # Send email with CSV attachment
+                  # TODO: Implement actual email sending with attachment
+                  print(f"Would send email to {recipient_email} with narrative and CSV attachment")
+                  
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps('AWS Access Review completed successfully')
+                  }
+                  
+              except Exception as e:
+                  print(f"Error in AWS Access Review: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'body': json.dumps(f'Error: {str(e)}')
+                  }
+
+  # CloudWatch Event Rule for scheduled execution
+  ScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Scheduled rule for AWS Access Review"
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt AccessReviewLambda.Arn
+          Id: "AccessReviewTarget"
+
+  # Permission for CloudWatch Events to invoke Lambda
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AccessReviewLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ScheduledRule.Arn
+
+Outputs:
+  ReportBucketName:
+    Description: "Name of the S3 bucket storing access review reports"
+    Value: !Ref ReportBucket
+    
+  AccessReviewLambdaArn:
+    Description: "ARN of the Lambda function performing access reviews"
+    Value: !GetAtt AccessReviewLambda.Arn
+    
+  ScheduledRuleArn:
+    Description: "ARN of the CloudWatch Events rule for scheduled execution"
+    Value: !GetAtt ScheduledRule.Arn 
