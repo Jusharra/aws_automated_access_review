@@ -1,38 +1,237 @@
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
-# AWS Access Review
+# AWS Automated Access Review
 
-An open-source tool for automated AWS security posture assessment and reporting.
-
-## Overview
-
-AWS Access Review is a lightweight, open-source tool deployable via a single CloudFormation template. It deploys a Lambda function that analyzes IAM policies, Resource Control Policies (RCPs), Service Control Policies (SCPs), Security Hub findings, IAM Access Analyzer results, and CloudTrail logs. The findings are processed by Amazon Bedrock's Titan model to generate a narrative analysis, which is emailed to stakeholders along with a CSV report of all findings.
+A comprehensive solution for automated AWS security posture assessment and reporting. This tool helps you maintain security best practices by regularly scanning your AWS environment for potential security issues and sending detailed reports.
 
 ## Features
 
-- **Single-Click Deployment**: One CloudFormation template that creates all necessary resources
-- **Comprehensive Security Analysis**: Reviews IAM policies, SCPs, RCPs, Security Hub findings, IAM Access Analyzer results, and CloudTrail logs
-- **AI-Generated Narrative Reports**: Uses Amazon Bedrock Titan model to generate plain-language analysis
-- **Automated Reporting**: Generates CSV report and emails findings with recommendations
-- **Scheduled Execution**: Runs analyses on a configurable schedule
+- **IAM Security Assessment**: Identifies users without MFA, unused access keys, and overly permissive policies
+- **Security Hub Integration**: Collects and summarizes findings from AWS Security Hub
+- **IAM Access Analyzer**: Reports on resources with external access
+- **AI-Powered Analysis**: Uses Amazon Bedrock to generate human-readable summaries of findings
+- **Email Reporting**: Sends detailed reports with severity-based categorization
+- **Scheduled Execution**: Runs automatically on a configurable schedule
 
 ## Prerequisites
 
-- AWS account with permissions to create CloudFormation stacks
-- Organizations service (for SCP/RCP analysis, optional)
-- Security Hub enabled (optional)
-- IAM Access Analyzer enabled (optional)
-- CloudTrail enabled (optional)
-- Amazon Bedrock access with Titan model enabled
-- Verified email address for SES (for sending reports)
+- AWS CLI installed and configured with appropriate permissions
+- Python 3.11 or higher
+- An AWS account with the following services enabled:
+  - AWS Security Hub
+  - IAM Access Analyzer
+  - Amazon SES (with verified email for receiving reports)
+  - Amazon Bedrock (with access to Claude model)
 
-## Installation
+## Deployment
 
-1. Clone this repository
-2. Deploy the CloudFormation template:
+1. Clone this repository:
    ```
-   aws cloudformation deploy --template-file templates/access-review.yaml --stack-name aws-access-review --capabilities CAPABILITY_IAM --parameter-overrides RecipientEmail=your-email@example.com
+   git clone https://github.com/ajy0127/aws_automated_access_review.git
+   cd aws_automated_access_review
    ```
+
+2. Check your AWS credentials and required services:
+   ```
+   ./check_aws_creds.sh
+   ```
+   
+   You can specify an AWS profile:
+   ```
+   ./check_aws_creds.sh --profile your-aws-profile
+   ```
+
+3. Run the deployment script:
+   ```
+   ./deploy.sh --email your.email@example.com
+   ```
+
+   Additional options:
+   - `--stack-name`: Custom CloudFormation stack name (default: aws-access-review)
+   - `--region`: AWS region for deployment (default: us-east-1)
+   - `--schedule`: Schedule expression for running the review (default: rate(7 days))
+   - `--profile`: AWS CLI profile to use for credentials (default: uses default profile)
+
+4. Verify your email address by clicking the link in the verification email sent by AWS SES.
+
+5. (Optional) Run an immediate access review report:
+   ```
+   ./run_report.sh
+   ```
+   
+   You can specify the same options as with the deployment script:
+   ```
+   ./run_report.sh --stack-name your-stack-name --region your-region --profile your-aws-profile
+   ```
+
+## How It Works
+
+1. The Lambda function runs on the configured schedule
+2. It collects security findings from multiple AWS services
+3. Amazon Bedrock generates a narrative summary of the findings
+4. A detailed report is stored in S3 and sent via email
+5. The report categorizes findings by severity and provides recommendations
+
+## Running Reports
+
+The AWS Access Review tool runs automatically according to the schedule you specified during deployment (default: weekly). However, you can also trigger a report manually:
+
+1. Using the provided script:
+   ```
+   ./run_report.sh --profile your-aws-profile
+   ```
+   
+   This script will:
+   - Find your Lambda function from the CloudFormation stack
+   - Invoke it with an empty event payload
+   - Provide a link to CloudWatch logs for monitoring progress
+
+2. Using the AWS Console:
+   - Navigate to the Lambda console
+   - Find the function named `<stack-name>-access-review`
+   - Click "Test" and use an empty event `{}`
+   
+3. Using the AWS CLI directly:
+   ```
+   aws lambda invoke --function-name <stack-name>-access-review --payload '{}' response.json --profile your-aws-profile
+   ```
+
+Reports are sent to the email address you specified during deployment and are also stored in the S3 bucket created by the CloudFormation stack.
+
+## Testing Locally
+
+You can test the Lambda function locally before deploying to AWS:
+
+```bash
+# Basic usage (will prompt for email and bucket)
+./test_lambda.py
+
+# Specify email and bucket on command line
+./test_lambda.py --email your.email@example.com --bucket your-report-bucket
+
+# Use a specific AWS profile
+./test_lambda.py --profile your-aws-profile
+```
+
+Available options:
+- `--email`: Recipient email address
+- `--bucket`: S3 bucket name for reports (optional)
+- `--profile`: AWS profile to use for credentials
+
+## Customization
+
+You can customize the tool by modifying the following files:
+- `src/lambda/index.py`: Main Lambda function code
+- `src/lambda/bedrock_integration.py`: Amazon Bedrock integration
+- `templates/access-review-real.yaml`: CloudFormation template
+
+## Troubleshooting
+
+### AWS Credentials
+
+- **"Unable to locate credentials"**: Configure your AWS credentials using `aws configure` or specify a profile with `--profile`
+- **"The config profile could not be found"**: Check available profiles with `aws configure list-profiles`
+- **"Access denied"**: Ensure your AWS credentials have the necessary permissions
+
+### Email Verification
+
+- **Email not received**: Verify that your email address is verified in Amazon SES
+  - Check your CloudFormation stack outputs for the recipient email
+  - Verify the email in the SES console: https://console.aws.amazon.com/ses/home#verified-senders-email
+  - Check your spam folder for the verification email
+
+### Lambda Function
+
+- **Lambda execution errors**: Check CloudWatch Logs for the Lambda function
+  - Navigate to CloudWatch Logs in the AWS Console
+  - Look for the log group named `/aws/lambda/<stack-name>-access-review`
+  - Review the most recent log stream for errors
+
+### AWS Services
+
+- **Missing findings**: Ensure that Security Hub and IAM Access Analyzer are enabled
+  - Security Hub: https://console.aws.amazon.com/securityhub/
+  - IAM Access Analyzer: https://console.aws.amazon.com/iam/home#/access-analyzer
+
+### Running Reports
+
+- **"Could not find Lambda function ARN"**: Verify your stack name with `aws cloudformation list-stacks`
+- **Lambda invocation fails**: Check that your IAM role has permission to invoke Lambda functions
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Authors
+
+See the AUTHORS.md file for a list of contributors to this project.
+
+## Product Requirements Document
+
+### 1. Product Vision
+
+A simple, zero-configuration tool that automatically analyzes AWS security posture and delivers actionable insights directly to stakeholders' inboxes, with no dashboards or complex interfaces to maintain.
+
+### 2. Target Users
+
+- AWS administrators managing single or multi-account environments
+- Security engineers conducting periodic access reviews
+- DevOps teams implementing least-privilege security practices
+- Organizations requiring evidence of security controls for compliance
+
+### 3. Core Features
+
+#### 3.1 Single-Click Deployment
+- One CloudFormation template that creates all necessary resources
+- Minimal configuration required (just email recipient)
+- Self-contained with dependencies only on AWS native services
+
+#### 3.2 Comprehensive Security Analysis
+- Evaluate IAM policies for security best practices
+- Review Service Control Policies (SCPs) across the organization
+- Analyze Resource Control Policies (RCPs) for compliance
+- Import Security Hub IAM findings
+- Incorporate IAM Access Analyzer results
+- Analyze CloudTrail logs for suspicious activity
+
+#### 3.3 AI-Generated Narrative Reports
+- Use Amazon Bedrock Titan model to generate plain-language analysis
+- Provide executive summary of security posture
+- Highlight critical findings with context and impact
+- Generate specific remediation recommendations
+
+#### 3.4 Automated Reporting
+- Generate comprehensive CSV report of all findings
+- Email delivery of narrative and CSV attachment
+- S3 backup of all reports for historical reference
+
+#### 3.5 Scheduled Execution
+- Run analyses on a configurable schedule (default: weekly)
+- Option for on-demand execution
+
+### 4. Technical Architecture
+
+#### 4.1 AWS Components
+- **Lambda Function**: Core analysis engine and integrations
+- **S3 Bucket**: Report storage
+- **CloudWatch Events**: Scheduling
+- **IAM Roles**: Least-privilege permissions for operation
+- **SNS/SES**: Email delivery
+- **Amazon Bedrock**: AI-generated narrative using Titan model
+
+#### 4.2 Workflow
+1. CloudWatch scheduled event triggers Lambda function
+2. Lambda collects data from:
+   - IAM (policies, roles, users)
+   - Organizations (SCPs, RCPs)
+   - Security Hub IAM findings
+   - IAM Access Analyzer results
+   - CloudTrail logs
+3. Lambda processes findings and generates structured data
+4. Lambda sends structured findings to Amazon Bedrock
+5. Bedrock Titan model generates natural language narrative and recommendations
+6. Lambda generates CSV report of all findings
+7. Lambda uploads CSV to S3 and sends email with narrative and CSV attachment
 
 ## Development
 
@@ -114,87 +313,3 @@ For more options:
 ```bash
 ./run_tests.sh --help
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure your code passes all tests and follows our code style guidelines before submitting a PR.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Product Requirements Document
-
-### 1. Product Vision
-
-A simple, zero-configuration tool that automatically analyzes AWS security posture and delivers actionable insights directly to stakeholders' inboxes, with no dashboards or complex interfaces to maintain.
-
-### 2. Target Users
-
-- AWS administrators managing single or multi-account environments
-- Security engineers conducting periodic access reviews
-- DevOps teams implementing least-privilege security practices
-- Organizations requiring evidence of security controls for compliance
-
-### 3. Core Features
-
-#### 3.1 Single-Click Deployment
-- One CloudFormation template that creates all necessary resources
-- Minimal configuration required (just email recipient)
-- Self-contained with dependencies only on AWS native services
-
-#### 3.2 Comprehensive Security Analysis
-- Evaluate IAM policies for security best practices
-- Review Service Control Policies (SCPs) across the organization
-- Analyze Resource Control Policies (RCPs) for compliance
-- Import Security Hub IAM findings
-- Incorporate IAM Access Analyzer results
-- Analyze CloudTrail logs for suspicious activity
-
-#### 3.3 AI-Generated Narrative Reports
-- Use Amazon Bedrock Titan model to generate plain-language analysis
-- Provide executive summary of security posture
-- Highlight critical findings with context and impact
-- Generate specific remediation recommendations
-
-#### 3.4 Automated Reporting
-- Generate comprehensive CSV report of all findings
-- Email delivery of narrative and CSV attachment
-- S3 backup of all reports for historical reference
-
-#### 3.5 Scheduled Execution
-- Run analyses on a configurable schedule (default: weekly)
-- Option for on-demand execution
-
-### 4. Technical Architecture
-
-#### 4.1 AWS Components
-- **Lambda Function**: Core analysis engine and integrations
-- **S3 Bucket**: Report storage
-- **CloudWatch Events**: Scheduling
-- **IAM Roles**: Least-privilege permissions for operation
-- **SNS/SES**: Email delivery
-- **Amazon Bedrock**: AI-generated narrative using Titan model
-
-#### 4.2 Workflow
-1. CloudWatch scheduled event triggers Lambda function
-2. Lambda collects data from:
-   - IAM (policies, roles, users)
-   - Organizations (SCPs, RCPs)
-   - Security Hub IAM findings
-   - IAM Access Analyzer results
-   - CloudTrail logs
-3. Lambda processes findings and generates structured data
-4. Lambda sends structured findings to Amazon Bedrock
-5. Bedrock Titan model generates natural language narrative and recommendations
-6. Lambda generates CSV report of all findings
-7. Lambda uploads CSV to S3 and sends email with narrative and CSV attachment
-
