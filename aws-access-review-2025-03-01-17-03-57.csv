@@ -1,3 +1,5 @@
+## Example Report 
+
 id,category,severity,resource_type,resource_id,description,recommendation,compliance,detection_date
 IAM-001,IAM,Medium,IAM Role,sample-role,This is a sample IAM finding for demonstration purposes,"No action needed, this is just a sample",CIS 1.2,2025-03-01T17:03:57.332503
 SCP-001,SCP,Low,Service Control Policy,sample-scp,This is a sample SCP finding for demonstration purposes,"No action needed, this is just a sample",AWS Best Practices,2025-03-01T17:03:57.332522
