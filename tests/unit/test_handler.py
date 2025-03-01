@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 from moto import mock_aws
 
 # Add the lambda directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda")))
 import index  # noqa: E402
 
 

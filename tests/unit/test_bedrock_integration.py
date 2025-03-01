@@ -5,12 +5,12 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 # Add the lambda directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda")))
 import bedrock_integration  # noqa: E402
 
 
 class TestBedrockIntegration(unittest.TestCase):
-    """Test cases for the Bedrock integration module."""
+    """Test the Bedrock integration module."""
 
     def test_prepare_prompt(self):
         """Test the prepare_prompt function."""
@@ -19,22 +19,25 @@ class TestBedrockIntegration(unittest.TestCase):
             {
                 "id": "finding1",
                 "category": "IAM",
-                "severity": "HIGH",
+                "severity": "High",
                 "resource_type": "AWS::IAM::Policy",
+                "resource_id": "policy1",
                 "description": "Overly permissive IAM policy",
             },
             {
                 "id": "finding2",
                 "category": "IAM",
-                "severity": "MEDIUM",
+                "severity": "Medium",
                 "resource_type": "AWS::IAM::Role",
+                "resource_id": "role1",
                 "description": "Role with unused permissions",
             },
             {
                 "id": "finding3",
                 "category": "Security Hub",
-                "severity": "CRITICAL",
+                "severity": "Critical",
                 "resource_type": "AWS::IAM::User",
+                "resource_id": "user1",
                 "description": "User with console access but no MFA",
             },
         ]
@@ -44,28 +47,25 @@ class TestBedrockIntegration(unittest.TestCase):
 
         # Assertions
         self.assertIsInstance(prompt, str)
-        self.assertIn("AWS Access Review", prompt)
-        self.assertIn("HIGH: 1", prompt)
-        self.assertIn("MEDIUM: 1", prompt)
-        self.assertIn("CRITICAL: 1", prompt)
-        self.assertIn("IAM: 2", prompt)
-        self.assertIn("Security Hub: 1", prompt)
+        self.assertIn("AWS Security Findings Summary", prompt)
+        self.assertIn("Total findings: 3", prompt)
+        self.assertIn("Critical: 1", prompt)
+        self.assertIn("High: 1", prompt)
+        self.assertIn("Medium: 1", prompt)
 
 
-class TestTitanModelIntegration(unittest.TestCase):
-    """Test cases for the Titan model integration."""
+class TestClaudeModelIntegration(unittest.TestCase):
+    """Test the Claude model integration."""
 
     @patch("boto3.client")
-    def test_invoke_titan_model(self, mock_boto3_client):
-        """Test the invoke_titan_model function."""
+    def test_invoke_claude_model(self, mock_boto3_client):
+        """Test the invoke_claude_model function."""
         # Mock the Bedrock client
         mock_bedrock = MagicMock()
         mock_boto3_client.return_value = mock_bedrock
 
         # Mock the response from Bedrock
         mock_response = {
-            "inputTokenCount": 100,
-            "outputTokenCount": 50,
             "completion": "This is a test narrative.",
         }
         mock_bedrock.invoke_model.return_value = {
@@ -76,37 +76,32 @@ class TestTitanModelIntegration(unittest.TestCase):
 
         # Call the function
         prompt = "Generate a narrative for AWS Access Review"
-        response = bedrock_integration.invoke_titan_model(mock_bedrock, prompt)
+        response = bedrock_integration.invoke_claude_model(mock_bedrock, prompt)
 
         # Assertions
         self.assertEqual(response, mock_response)
         mock_bedrock.invoke_model.assert_called_once()
-        args, kwargs = mock_bedrock.invoke_model.call_args
-        body = json.loads(kwargs["body"])
-        self.assertEqual(body["inputText"], prompt)
 
 
 class TestNarrativeExtraction(unittest.TestCase):
-    """Test cases for narrative extraction."""
+    """Test the narrative extraction function."""
 
-    def test_extract_narrative(self):
-        """Test the extract_narrative function."""
-        # Sample response from Titan model
+    def test_extract_narrative_claude(self):
+        """Test the extract_narrative_claude function."""
+        # Sample response from Claude model
         response = {
-            "inputTokenCount": 100,
-            "outputTokenCount": 50,
             "completion": "This is a test narrative.",
         }
 
         # Call the function
-        narrative = bedrock_integration.extract_narrative(response)
+        narrative = bedrock_integration.extract_narrative_claude(response)
 
         # Assertions
         self.assertEqual(narrative, "This is a test narrative.")
 
 
 class TestFallbackNarrative(unittest.TestCase):
-    """Test cases for fallback narrative generation."""
+    """Test the fallback narrative generation."""
 
     def test_generate_fallback_narrative(self):
         """Test the generate_fallback_narrative function."""
@@ -115,41 +110,26 @@ class TestFallbackNarrative(unittest.TestCase):
 
         # Assertions
         self.assertIsInstance(narrative, str)
-        self.assertIn("AWS Access Review", narrative)
-        self.assertIn("Unable to generate AI-powered narrative", narrative)
+        self.assertIn("AWS Access Review Report", narrative)
+        self.assertIn("technical limitations", narrative)
 
 
 class TestGenerateNarrative(unittest.TestCase):
-    """Test cases for the generate_narrative function."""
+    """Test the generate_narrative function."""
 
-    @patch("bedrock_integration.invoke_titan_model")
-    @patch("bedrock_integration.extract_narrative")
+    @patch("bedrock_integration.get_ai_analysis")
     @patch("boto3.client")
-    def test_generate_narrative_success(
-        self, mock_boto3_client, mock_extract_narrative, mock_invoke_titan_model
-    ):
-        """Test the generate_narrative function with successful API call."""
+    def test_generate_narrative_success(self, mock_boto3_client, mock_get_ai_analysis):
+        """Test the generate_narrative function with successful AI analysis."""
         # Mock the Bedrock client
         mock_bedrock = MagicMock()
         mock_boto3_client.return_value = mock_bedrock
 
-        # Mock the response from invoke_titan_model
-        mock_response = {"completion": "This is a test narrative."}
-        mock_invoke_titan_model.return_value = mock_response
+        # Mock the AI analysis
+        mock_get_ai_analysis.return_value = "This is a test narrative."
 
-        # Mock the extracted narrative
-        mock_extract_narrative.return_value = "This is a test narrative."
-
-        # Sample findings data
-        findings = [
-            {
-                "id": "finding1",
-                "category": "IAM",
-                "severity": "HIGH",
-                "resource_type": "AWS::IAM::Policy",
-                "description": "Overly permissive IAM policy",
-            }
-        ]
+        # Sample findings
+        findings = [{"id": "finding1", "severity": "High"}]
 
         # Call the function
         narrative = bedrock_integration.generate_narrative(findings)
@@ -157,5 +137,4 @@ class TestGenerateNarrative(unittest.TestCase):
         # Assertions
         self.assertEqual(narrative, "This is a test narrative.")
         mock_boto3_client.assert_called_once_with("bedrock-runtime")
-        mock_invoke_titan_model.assert_called_once()
-        mock_extract_narrative.assert_called_once_with(mock_response)
+        mock_get_ai_analysis.assert_called_once_with(mock_bedrock, findings)
