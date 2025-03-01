@@ -7,7 +7,9 @@ from unittest.mock import patch, MagicMock
 from moto import mock_aws
 
 # Add the lambda directory to the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
+)
 import index  # noqa: E402
 
 
@@ -97,7 +99,7 @@ def test_handler_success(s3, ses, lambda_environment):
                             ):
                                 with patch("index.send_email_with_attachment"):
                                     # Call the handler
-                                    response = index.lambda_handler({}, {})
+                                    response = index.handler({}, {})
 
                                     # Verify the response
                                     assert response["statusCode"] == 200
@@ -164,7 +166,7 @@ def test_handler_exception_handling(lambda_environment):
     with patch("boto3.client", side_effect=Exception("Test exception")):
         try:
             # Call the handler
-            response = index.lambda_handler({}, {})
+            response = index.handler({}, {})
 
             # Verify the response
             assert response["statusCode"] == 500
@@ -224,7 +226,7 @@ class TestHandler(unittest.TestCase):
         # Call the handler
         event = {}
         context = MagicMock()
-        response = index.lambda_handler(event, context)
+        response = index.handler(event, context)
 
         # Assertions
         self.assertEqual(response["statusCode"], 200)
