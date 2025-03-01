@@ -351,7 +351,7 @@ def test_collect_cloudtrail_findings():
     # Create a properly configured mock
     mock_cloudtrail = MagicMock()
     mock_s3 = MagicMock()  # Add mock S3 client
-    
+
     # Track all mocks that need to be explicitly reset
     mocks_to_cleanup = [mock_cloudtrail, mock_s3]
 
@@ -399,7 +399,9 @@ def test_collect_cloudtrail_findings():
     # Configure S3 mock responses
     print("Setting up S3 mock responses...")
     mock_s3.list_objects_v2.return_value = {"Contents": []}
-    mock_s3.get_bucket_encryption.side_effect = Exception("ServerSideEncryptionConfigurationNotFoundError")
+    mock_s3.get_bucket_encryption.side_effect = Exception(
+        "ServerSideEncryptionConfigurationNotFoundError"
+    )
 
     print("CloudTrail mock setup complete")
 
@@ -421,12 +423,13 @@ def test_collect_cloudtrail_findings():
         mock_cloudtrail.describe_trails.assert_called_once()
         mock_cloudtrail.get_trail_status.assert_called_once()
         mock_cloudtrail.get_event_selectors.assert_called_once()
-        
+
         print("Assertions passed")
 
     except Exception as e:
         print(f"ERROR in test: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         raise
     finally:
@@ -438,7 +441,7 @@ def test_collect_cloudtrail_findings():
                 print(f"Reset mock {i+1}/{len(mocks_to_cleanup)}")
             except Exception as e:
                 print(f"Error resetting mock {i+1}: {e}")
-                
+
         print("=== FINISHED test_collect_cloudtrail_findings TEST ===")
 
 
@@ -530,19 +533,19 @@ class TestHandler(unittest.TestCase):
         # Mock AWS clients
         mock_s3 = MagicMock()
         mock_ses = MagicMock()
-        
+
         # Configure boto3.client to return our mocks
         def mock_client(service_name, *args, **kwargs):
-            if service_name == 's3':
+            if service_name == "s3":
                 return mock_s3
-            elif service_name == 'ses':
+            elif service_name == "ses":
                 return mock_ses
             else:
                 # Return a new MagicMock for any other service
                 return MagicMock()
-                
+
         mock_boto3_client.side_effect = mock_client
-        
+
         # Mock the findings
         mock_collect_iam_findings.return_value = [{"id": "iam-1", "category": "IAM"}]
         mock_collect_securityhub_findings.return_value = [
@@ -558,9 +561,12 @@ class TestHandler(unittest.TestCase):
 
         # Mock the narrative
         mock_generate_ai_narrative.return_value = "Test narrative"
-        
+
         # Set up environment variables
-        with patch.dict(os.environ, {"REPORT_BUCKET": "test-bucket", "RECIPIENT_EMAIL": "test@example.com"}):
+        with patch.dict(
+            os.environ,
+            {"REPORT_BUCKET": "test-bucket", "RECIPIENT_EMAIL": "test@example.com"},
+        ):
             try:
                 # Call the handler
                 event = {}
@@ -569,7 +575,9 @@ class TestHandler(unittest.TestCase):
 
                 # Assertions
                 self.assertEqual(response["statusCode"], 200)
-                self.assertIn("AWS Access Review completed successfully", response["body"])
+                self.assertIn(
+                    "AWS Access Review completed successfully", response["body"]
+                )
 
                 # Verify all the functions were called
                 mock_collect_iam_findings.assert_called_once()
@@ -578,7 +586,7 @@ class TestHandler(unittest.TestCase):
                 mock_collect_cloudtrail_findings.assert_called_once()
                 mock_collect_scp_findings.assert_called_once()
                 mock_generate_ai_narrative.assert_called_once()
-                
+
                 # Verify S3 and SES operations
                 mock_s3.put_object.assert_called_once()
                 mock_ses.send_raw_email.assert_called_once()
@@ -646,8 +654,10 @@ class TestSecurityHubFindings(unittest.TestCase):
     @patch("boto3.client")
     def test_collect_securityhub_findings(self, mock_boto3_client):
         """Test the collect_securityhub_findings function."""
-        print("\n=== STARTING TestSecurityHubFindings.test_collect_securityhub_findings TEST ===")
-        
+        print(
+            "\n=== STARTING TestSecurityHubFindings.test_collect_securityhub_findings TEST ==="
+        )
+
         try:
             # Mock the Security Hub client
             mock_securityhub = MagicMock()
@@ -668,7 +678,7 @@ class TestSecurityHubFindings(unittest.TestCase):
             # Mock the paginator
             mock_paginator = MagicMock()
             mock_securityhub.get_paginator.return_value = mock_paginator
-            
+
             # Correctly mock the paginate method with filters
             mock_paginator.paginate.return_value = [
                 {
@@ -682,15 +692,13 @@ class TestSecurityHubFindings(unittest.TestCase):
                             "Compliance": {"Status": "FAILED"},
                             "FirstObservedAt": "2023-01-01T00:00:00Z",
                             "Remediation": {
-                                "Recommendation": {
-                                    "Text": "Fix this issue"
-                                }
-                            }
+                                "Recommendation": {"Text": "Fix this issue"}
+                            },
                         }
                     ]
                 }
             ]
-            
+
             print("Calling collect_securityhub_findings...")
             # Call the function
             findings = index.collect_securityhub_findings(mock_securityhub)
@@ -702,14 +710,17 @@ class TestSecurityHubFindings(unittest.TestCase):
             mock_securityhub.get_paginator.assert_called_once_with("get_findings")
             mock_paginator.paginate.assert_called_once()
             print("Assertions passed")
-            
+
         except Exception as e:
             print(f"ERROR in test: {type(e).__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             raise
         finally:
-            print("=== FINISHED TestSecurityHubFindings.test_collect_securityhub_findings TEST ===")
+            print(
+                "=== FINISHED TestSecurityHubFindings.test_collect_securityhub_findings TEST ==="
+            )
 
 
 class TestAccessAnalyzerFindings(unittest.TestCase):
