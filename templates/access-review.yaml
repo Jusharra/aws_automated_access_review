@@ -9,7 +9,7 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: 'rate(7 days)'
-    Description: Schedule expression for running the access review (default: weekly)
+    Description: "Schedule expression for running the access review (default: weekly)"
     
   ReportBucketName:
     Type: String
