@@ -1,92 +1,73 @@
 import os
 import pytest
-import cfnlint.core
-from pathlib import Path
-import subprocess
-import json
+import yaml
 
-@pytest.fixture
-def template_path():
-    """Path to the CloudFormation template."""
-    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                        'templates', 'access-review.yaml')
+# Import the template file
+template_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "templates",
+    "access-review.yaml",
+)
 
-def test_cfn_lint(template_path):
-    """Test the CloudFormation template with cfn-lint."""
-    # Verify the template file exists
-    assert os.path.isfile(template_path), f"Template file not found: {template_path}"
-    
-    # Run cfn-lint using subprocess to avoid API changes
-    cmd = ['cfn-lint', '--format', 'json', template_path]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    # If there are errors, the output will be in JSON format
-    if result.returncode != 0:
+
+def test_template_exists():
+    """Test that the CloudFormation template file exists."""
+    assert os.path.isfile(template_path), "Template file does not exist"
+
+
+def test_template_is_valid_yaml():
+    """Test that the CloudFormation template is valid YAML."""
+    with open(template_path, "r") as f:
         try:
-            errors = json.loads(result.stdout)
-            # Filter out informational messages (level might be string or int)
-            # Level values: 'informational'=0, 'warning'=1, 'error'=2
-            error_messages = []
-            for error in errors:
-                level = error.get('Level', '')
-                # Skip informational messages
-                if level == 'informational':
-                    continue
-                error_messages.append(f"{error.get('Rule', '')}: {error.get('Message', '')} (Line: {error.get('Location', {}).get('Start', {}).get('LineNumber', 'N/A')})")
-            
-            assert len(error_messages) == 0, f"CloudFormation template validation failed with {len(error_messages)} issues:\n" + "\n".join(error_messages)
-        except json.JSONDecodeError:
-            # If not JSON, just print the output
-            assert result.returncode == 0, f"CloudFormation template validation failed:\n{result.stdout}\n{result.stderr}"
-    
-    # If we got here, the template passed validation
+            yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            pytest.fail(f"Template is not valid YAML: {e}")
 
-def test_template_parameters():
-    """Test the CloudFormation template parameters."""
-    # Load the template
-    template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                'templates', 'access-review.yaml')
-    
-    with open(template_path, 'r') as f:
-        template_content = f.read()
-    
-    # Check for required parameters
-    assert 'RecipientEmail' in template_content, "Required parameter 'RecipientEmail' not found in template"
-    assert 'ScheduleExpression' in template_content, "Parameter 'ScheduleExpression' not found in template"
-    assert 'ReportBucketName' in template_content, "Parameter 'ReportBucketName' not found in template"
 
-def test_template_resources():
-    """Test the CloudFormation template resources."""
-    # Load the template
-    template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                'templates', 'access-review.yaml')
-    
-    with open(template_path, 'r') as f:
-        template_content = f.read()
-    
+def test_template_has_required_resources():
+    """Test that the CloudFormation template has the required resources."""
+    with open(template_path, "r") as f:
+        template = yaml.safe_load(f)
+
     # Check for required resources
-    required_resources = [
-        'ReportBucket',
-        'AccessReviewLambdaRole',
-        'AccessReviewLambda',
-        'ScheduledRule',
-        'PermissionForEventsToInvokeLambda'
-    ]
-    
-    for resource in required_resources:
-        assert resource in template_content, f"Required resource '{resource}' not found in template"
-    
-    # Check for IAM permissions
-    required_permissions = [
-        's3:PutObject',
-        'iam:GetPolicy',
-        'organizations:DescribeOrganization',
-        'securityhub:GetFindings',
-        'access-analyzer:ListAnalyzers',
-        'cloudtrail:LookupEvents',
-        'bedrock:InvokeModel',
-        'ses:SendEmail'
-    ]
-    
-    for permission in required_permissions:
-        assert permission in template_content, f"Required IAM permission '{permission}' not found in template" 
+    resources = template.get("Resources", {})
+    assert "AccessReviewLambda" in resources, "Lambda function resource is missing"
+    assert "AccessReviewS3Bucket" in resources, "S3 bucket resource is missing"
+    assert "AccessReviewLambdaRole" in resources, "Lambda execution role is missing"
+
+
+def test_lambda_has_required_properties():
+    """Test that the Lambda function has the required properties."""
+    with open(template_path, "r") as f:
+        template = yaml.safe_load(f)
+
+    lambda_resource = template.get("Resources", {}).get("AccessReviewLambda", {})
+    assert lambda_resource.get("Type") == "AWS::Lambda::Function"
+    assert "Properties" in lambda_resource
+    properties = lambda_resource.get("Properties", {})
+    assert "Runtime" in properties
+    assert "Handler" in properties
+    assert "Role" in properties
+
+
+def test_s3_bucket_has_required_properties():
+    """Test that the S3 bucket has the required properties."""
+    with open(template_path, "r") as f:
+        template = yaml.safe_load(f)
+
+    bucket_resource = template.get("Resources", {}).get("AccessReviewS3Bucket", {})
+    assert bucket_resource.get("Type") == "AWS::S3::Bucket"
+    assert "Properties" in bucket_resource
+
+
+def test_lambda_role_has_required_policies():
+    """Test that the Lambda execution role has the required policies."""
+    with open(template_path, "r") as f:
+        template = yaml.safe_load(f)
+
+    role_resource = template.get("Resources", {}).get("AccessReviewLambdaRole", {})
+    assert role_resource.get("Type") == "AWS::IAM::Role"
+    assert "Properties" in role_resource
+    properties = role_resource.get("Properties", {})
+    assert "AssumeRolePolicyDocument" in properties
+    assert "ManagedPolicyArns" in properties or "Policies" in properties

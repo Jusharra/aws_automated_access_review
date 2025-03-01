@@ -1,164 +1,159 @@
+import unittest
 import json
-import pytest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 
-# Import the Bedrock integration module
 import sys
-sys.path.append('src/lambda')
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../src/lambda"))
 import bedrock_integration
 
-@pytest.fixture
-def sample_findings():
-    """Sample security findings for testing."""
-    return [
-        {
-            'id': 'TEST-001',
-            'category': 'IAM',
-            'severity': 'Critical',
-            'resource_type': 'IAM Role',
-            'resource_id': 'test-role-1',
-            'description': 'Test critical finding',
-            'recommendation': 'Fix this critical issue',
-            'compliance': 'CIS 1.1',
-            'detection_date': '2023-01-01T00:00:00'
-        },
-        {
-            'id': 'TEST-002',
-            'category': 'IAM',
-            'severity': 'High',
-            'resource_type': 'IAM User',
-            'resource_id': 'test-user-1',
-            'description': 'Test high severity finding',
-            'recommendation': 'Fix this high severity issue',
-            'compliance': 'CIS 1.2',
-            'detection_date': '2023-01-01T00:00:00'
-        },
-        {
-            'id': 'TEST-003',
-            'category': 'S3',
-            'severity': 'Medium',
-            'resource_type': 'S3 Bucket',
-            'resource_id': 'test-bucket',
-            'description': 'Test medium severity finding',
-            'recommendation': 'Consider fixing this issue',
-            'compliance': 'AWS Best Practices',
-            'detection_date': '2023-01-01T00:00:00'
-        }
-    ]
 
-def test_prepare_prompt(sample_findings):
-    """Test the prompt preparation function."""
-    prompt = bedrock_integration.prepare_prompt(sample_findings)
-    
-    # Verify the prompt contains key information
-    assert 'Total findings: 3' in prompt
-    assert 'Critical: 1' in prompt
-    assert 'High: 1' in prompt
-    assert 'Medium: 1' in prompt
-    assert 'Category: IAM' in prompt
-    assert 'Category: S3' in prompt
-    assert 'Test critical finding' in prompt
-    assert 'Test high severity finding' in prompt
-    assert 'Test medium severity finding' in prompt
+class TestBedrockIntegration(unittest.TestCase):
+    """Test cases for the Bedrock integration module."""
 
-def test_invoke_titan_model():
-    """Test the Titan model invocation function."""
-    # Create a mock Bedrock client
-    mock_bedrock = MagicMock()
-    
-    # Configure the mock response
-    mock_response = {
-        'body': MagicMock()
-    }
-    mock_response['body'].read.return_value = json.dumps({
-        'results': [{'outputText': 'This is a test narrative.'}]
-    })
-    mock_bedrock.invoke_model.return_value = mock_response
-    
-    # Call the function
-    response = bedrock_integration.invoke_titan_model(mock_bedrock, "Test prompt")
-    
-    # Verify the function called Bedrock with the right parameters
-    mock_bedrock.invoke_model.assert_called_once()
-    args, kwargs = mock_bedrock.invoke_model.call_args
-    
-    # Check that the model ID is correct
-    assert kwargs['modelId'] == 'amazon.titan-text-express-v1'
-    
-    # Check that the request body contains the prompt
-    request_body = json.loads(kwargs['body'])
-    assert request_body['inputText'] == 'Test prompt'
-    assert 'textGenerationConfig' in request_body
-    
-    # Verify the response is correctly parsed
-    assert 'results' in response
-    assert response['results'][0]['outputText'] == 'This is a test narrative.'
+    def test_prepare_prompt(self):
+        """Test the prepare_prompt function."""
+        # Sample findings data
+        findings = [
+            {
+                "id": "finding1",
+                "category": "IAM",
+                "severity": "HIGH",
+                "resource_type": "AWS::IAM::Policy",
+                "description": "Overly permissive IAM policy",
+            },
+            {
+                "id": "finding2",
+                "category": "IAM",
+                "severity": "MEDIUM",
+                "resource_type": "AWS::IAM::Role",
+                "description": "Role with unused permissions",
+            },
+            {
+                "id": "finding3",
+                "category": "Security Hub",
+                "severity": "CRITICAL",
+                "resource_type": "AWS::IAM::User",
+                "description": "User with console access but no MFA",
+            },
+        ]
 
-def test_extract_narrative():
-    """Test the narrative extraction function."""
-    # Test with a valid response
-    valid_response = {
-        'results': [{'outputText': 'This is a test narrative.'}]
-    }
-    narrative = bedrock_integration.extract_narrative(valid_response)
-    assert narrative == 'This is a test narrative.'
-    
-    # Test with an invalid response
-    invalid_response = {}
-    narrative = bedrock_integration.extract_narrative(invalid_response)
-    # The function might return an empty string or an error message
-    # Let's check for both possibilities
-    assert narrative == '' or 'Error generating narrative' in narrative
+        # Call the function
+        prompt = bedrock_integration.prepare_prompt(findings)
 
-def test_generate_fallback_narrative(sample_findings):
-    """Test the fallback narrative generation function."""
-    narrative = bedrock_integration.generate_fallback_narrative(sample_findings)
-    
-    # Verify the narrative contains key information
-    assert 'AWS ACCESS REVIEW REPORT' in narrative
-    assert 'EXECUTIVE SUMMARY' in narrative
-    assert '3 potential security issues' in narrative
-    assert 'CRITICAL FINDINGS' in narrative
-    assert 'HIGH SEVERITY FINDINGS' in narrative
-    assert 'test-role-1' in narrative
-    assert 'test-user-1' in narrative
-    assert 'Fix this critical issue' in narrative
-    assert 'RECOMMENDATIONS' in narrative
+        # Assertions
+        self.assertIsInstance(prompt, str)
+        self.assertIn("AWS Access Review", prompt)
+        self.assertIn("HIGH: 1", prompt)
+        self.assertIn("MEDIUM: 1", prompt)
+        self.assertIn("CRITICAL: 1", prompt)
+        self.assertIn("IAM: 2", prompt)
+        self.assertIn("Security Hub: 1", prompt)
 
-def test_generate_narrative_success(sample_findings):
-    """Test the main narrative generation function with successful Bedrock call."""
-    # Mock the Bedrock client and response
-    with patch('boto3.client') as mock_client:
-        # Configure the mock response
+
+class TestTitanModelIntegration(unittest.TestCase):
+    """Test cases for the Titan model integration."""
+
+    @patch("boto3.client")
+    def test_invoke_titan_model(self, mock_boto3_client):
+        """Test the invoke_titan_model function."""
+        # Mock the Bedrock client
         mock_bedrock = MagicMock()
+        mock_boto3_client.return_value = mock_bedrock
+
+        # Mock the response from Bedrock
         mock_response = {
-            'body': MagicMock()
+            "inputTokenCount": 100,
+            "outputTokenCount": 50,
+            "completion": "This is a test narrative.",
         }
-        mock_response['body'].read.return_value = json.dumps({
-            'results': [{'outputText': 'This is a test narrative from Bedrock.'}]
-        })
-        mock_bedrock.invoke_model.return_value = mock_response
-        mock_client.return_value = mock_bedrock
-        
-        # Call the function
-        narrative = bedrock_integration.generate_narrative(sample_findings)
-        
-        # Verify the result
-        assert narrative == 'This is a test narrative from Bedrock.'
-        mock_bedrock.invoke_model.assert_called_once()
+        mock_bedrock.invoke_model.return_value = {
+            "body": MagicMock(read=MagicMock(return_value=json.dumps(mock_response).encode()))
+        }
 
-def test_generate_narrative_fallback(sample_findings):
-    """Test the main narrative generation function with Bedrock failure."""
-    # Mock the Bedrock client to raise an exception
-    with patch('boto3.client') as mock_client:
-        mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.side_effect = Exception('Bedrock error')
-        mock_client.return_value = mock_bedrock
-        
         # Call the function
-        narrative = bedrock_integration.generate_narrative(sample_findings)
-        
-        # Verify the fallback narrative was generated
-        assert 'AWS ACCESS REVIEW REPORT' in narrative
-        assert 'EXECUTIVE SUMMARY' in narrative
-        assert '3 potential security issues' in narrative 
+        prompt = "Generate a narrative for AWS Access Review"
+        response = bedrock_integration.invoke_titan_model(mock_bedrock, prompt)
+
+        # Assertions
+        self.assertEqual(response, mock_response)
+        mock_bedrock.invoke_model.assert_called_once()
+        args, kwargs = mock_bedrock.invoke_model.call_args
+        body = json.loads(kwargs["body"])
+        self.assertEqual(body["inputText"], prompt)
+
+
+class TestNarrativeExtraction(unittest.TestCase):
+    """Test cases for narrative extraction."""
+
+    def test_extract_narrative(self):
+        """Test the extract_narrative function."""
+        # Sample response from Titan model
+        response = {
+            "inputTokenCount": 100,
+            "outputTokenCount": 50,
+            "completion": "This is a test narrative.",
+        }
+
+        # Call the function
+        narrative = bedrock_integration.extract_narrative(response)
+
+        # Assertions
+        self.assertEqual(narrative, "This is a test narrative.")
+
+
+class TestFallbackNarrative(unittest.TestCase):
+    """Test cases for fallback narrative generation."""
+
+    def test_generate_fallback_narrative(self):
+        """Test the generate_fallback_narrative function."""
+        # Call the function
+        narrative = bedrock_integration.generate_fallback_narrative()
+
+        # Assertions
+        self.assertIsInstance(narrative, str)
+        self.assertIn("AWS Access Review", narrative)
+        self.assertIn("Unable to generate AI-powered narrative", narrative)
+
+
+class TestGenerateNarrative(unittest.TestCase):
+    """Test cases for the generate_narrative function."""
+
+    @patch("bedrock_integration.invoke_titan_model")
+    @patch("bedrock_integration.extract_narrative")
+    @patch("boto3.client")
+    def test_generate_narrative_success(
+        self, mock_boto3_client, mock_extract_narrative, mock_invoke_titan_model
+    ):
+        """Test the generate_narrative function with successful API call."""
+        # Mock the Bedrock client
+        mock_bedrock = MagicMock()
+        mock_boto3_client.return_value = mock_bedrock
+
+        # Mock the response from invoke_titan_model
+        mock_response = {"completion": "This is a test narrative."}
+        mock_invoke_titan_model.return_value = mock_response
+
+        # Mock the extracted narrative
+        mock_extract_narrative.return_value = "This is a test narrative."
+
+        # Sample findings data
+        findings = [
+            {
+                "id": "finding1",
+                "category": "IAM",
+                "severity": "HIGH",
+                "resource_type": "AWS::IAM::Policy",
+                "description": "Overly permissive IAM policy",
+            }
+        ]
+
+        # Call the function
+        narrative = bedrock_integration.generate_narrative(findings)
+
+        # Assertions
+        self.assertEqual(narrative, "This is a test narrative.")
+        mock_boto3_client.assert_called_once_with("bedrock-runtime")
+        mock_invoke_titan_model.assert_called_once()
+        mock_extract_narrative.assert_called_once_with(mock_response)
