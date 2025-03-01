@@ -33,17 +33,17 @@ A comprehensive solution for automated AWS security posture assessment and repor
 
 2. Check your AWS credentials and required services:
    ```
-   ./check_aws_creds.sh
+   ./scripts/check_aws_creds.sh
    ```
    
    You can specify an AWS profile:
    ```
-   ./check_aws_creds.sh --profile your-aws-profile
+   ./scripts/check_aws_creds.sh --profile your-aws-profile
    ```
 
 3. Run the deployment script:
    ```
-   ./deploy.sh --email your.email@example.com
+   ./scripts/deploy.sh --email your.email@example.com
    ```
 
    Additional options:
@@ -56,12 +56,12 @@ A comprehensive solution for automated AWS security posture assessment and repor
 
 5. (Optional) Run an immediate access review report:
    ```
-   ./run_report.sh
+   ./scripts/run_report.sh
    ```
    
    You can specify the same options as with the deployment script:
    ```
-   ./run_report.sh --stack-name your-stack-name --region your-region --profile your-aws-profile
+   ./scripts/run_report.sh --stack-name your-stack-name --region your-region --profile your-aws-profile
    ```
 
 ## How It Works
@@ -78,7 +78,7 @@ The AWS Access Review tool runs automatically according to the schedule you spec
 
 1. Using the provided script:
    ```
-   ./run_report.sh --profile your-aws-profile
+   ./scripts/run_report.sh --profile your-aws-profile
    ```
    
    This script will:
@@ -104,13 +104,13 @@ You can test the Lambda function locally before deploying to AWS:
 
 ```bash
 # Basic usage (will prompt for email and bucket)
-./test_lambda.py
+python -m src.cli.local_runner
 
 # Specify email and bucket on command line
-./test_lambda.py --email your.email@example.com --bucket your-report-bucket
+python -m src.cli.local_runner --email your.email@example.com
 
-# Use a specific AWS profile
-./test_lambda.py --profile your-aws-profile
+# Use a specific AWS profile (set before running)
+AWS_PROFILE=your-aws-profile python -m src.cli.local_runner
 ```
 
 Available options:
@@ -235,6 +235,47 @@ A simple, zero-configuration tool that automatically analyzes AWS security postu
 
 ## Development
 
+### Project Structure
+
+```
+aws_access_review/
+├── src/                      # All source code
+│   ├── lambda/               # Lambda function code
+│   │   ├── __init__.py
+│   │   ├── index.py          # Main Lambda handler
+│   │   └── bedrock_integration.py
+│   └── cli/                  # CLI tools and scripts
+│       ├── __init__.py
+│       └── local_runner.py   # For local executions
+│
+├── scripts/                  # Shell scripts for various tasks
+│   ├── deploy.sh             # Deployment script
+│   ├── run_report.sh         # Run reports
+│   ├── run_tests.sh          # Run tests 
+│   ├── check_aws_creds.sh    # Credential checker
+│   ├── cleanup.sh            # Resource cleanup
+│   └── setup_dev.sh          # Dev environment setup
+│
+├── tests/                    # All test files
+│   ├── unit/                 # Unit tests
+│   │   ├── test_handler.py
+│   │   └── test_bedrock_integration.py
+│   ├── integration/          # Integration tests if needed
+│   ├── cfn/                  # CloudFormation tests
+│   │   └── test_template.py
+│   └── style/                # Code style tests
+│       └── test_code_style.py
+│
+├── templates/                # CloudFormation templates
+│   ├── access-review.yaml
+│   └── access-review-real.yaml
+│
+├── docs/                     # Documentation
+│   ├── implementation_plan.md
+│   ├── architecture.md       # System architecture docs
+│   └── usage.md              # Detailed usage instructions
+```
+
 ### Setting Up a Development Environment
 
 1. Clone the repository:
@@ -243,14 +284,21 @@ A simple, zero-configuration tool that automatically analyzes AWS security postu
    cd aws_automated_access_review
    ```
 
-2. Create and activate a virtual environment:
+2. Use the setup script to create a development environment:
+   ```bash
+   ./scripts/setup_dev.sh
+   ```
+   
+   This will:
+   - Create a virtual environment
+   - Install dependencies
+   - Set up mock AWS credentials
+   - Run basic tests
+
+3. Alternatively, set up manually:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
    pip install -r requirements.txt
    ```
 
@@ -287,29 +335,29 @@ The project includes comprehensive tests for both the Python Lambda function and
 To run all tests:
 
 ```bash
-./run_tests.sh
+./scripts/run_tests.sh
 ```
 
 To run only unit tests:
 
 ```bash
-./run_tests.sh --unit
+./scripts/run_tests.sh --unit
 ```
 
 To run only CloudFormation template tests:
 
 ```bash
-./run_tests.sh --cfn
+./scripts/run_tests.sh --cfn
 ```
 
 To generate a coverage report:
 
 ```bash
-./run_tests.sh --coverage
+./scripts/run_tests.sh --coverage
 ```
 
 For more options:
 
 ```bash
-./run_tests.sh --help
+./scripts/run_tests.sh --help
 ```
