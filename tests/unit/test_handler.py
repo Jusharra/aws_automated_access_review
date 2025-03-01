@@ -28,6 +28,13 @@ def s3(aws_credentials):
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         yield s3_client
+        # Explicitly clean up S3 resources
+        try:
+            buckets = s3_client.list_buckets()
+            for bucket in buckets.get("Buckets", []):
+                s3_client.delete_bucket(Bucket=bucket["Name"])
+        except Exception as e:
+            print(f"Error cleaning up S3 buckets: {e}")
 
 
 @pytest.fixture
@@ -35,6 +42,7 @@ def ses(aws_credentials):
     with mock_aws():
         ses_client = boto3.client("ses", region_name="us-east-1")
         yield ses_client
+        # SES cleanup is handled by the mock_aws context manager
 
 
 @pytest.fixture
@@ -49,69 +57,81 @@ def test_handler_success(s3, ses, lambda_environment):
     # Create the S3 bucket
     s3.create_bucket(Bucket="test-report-bucket")
 
-    # Mock all the AWS clients that will be used
-    with patch("boto3.client") as mock_client:
-        # Configure the mock to return specific clients
-        mock_client_instances = {
-            "iam": MagicMock(),
-            "organizations": MagicMock(),
-            "securityhub": MagicMock(),
-            "access-analyzer": MagicMock(),
-            "cloudtrail": MagicMock(),
-            "bedrock-runtime": MagicMock(),
-            "s3": s3,
-            "ses": ses,
-        }
+    try:
+        # Mock all the AWS clients that will be used
+        with patch("boto3.client") as mock_client:
+            # Configure the mock to return specific clients
+            mock_client_instances = {
+                "iam": MagicMock(),
+                "organizations": MagicMock(),
+                "securityhub": MagicMock(),
+                "access-analyzer": MagicMock(),
+                "cloudtrail": MagicMock(),
+                "bedrock-runtime": MagicMock(),
+                "s3": s3,
+                "ses": ses,
+            }
 
-        def side_effect(service_name, *args, **kwargs):
-            return mock_client_instances.get(service_name, MagicMock())
+            def side_effect(service_name, *args, **kwargs):
+                return mock_client_instances.get(service_name, MagicMock())
 
-        mock_client.side_effect = side_effect
+            mock_client.side_effect = side_effect
 
-        # Mock all the necessary functions directly
-        with patch(
-            "index.collect_iam_findings",
-            return_value=[
-                {
-                    "id": "iam-1",
-                    "category": "IAM",
-                    "severity": "Medium",
-                    "resource_type": "IAM Role",
-                    "resource_id": "test-role",
-                    "description": "Test IAM finding",
-                    "recommendation": "Test recommendation",
-                    "compliance": "CIS 1.2",
-                    "detection_date": "2023-01-01T00:00:00",
-                }
-            ],
-        ):
-            with patch("index.collect_scp_findings", return_value=[]):
-                with patch("index.collect_securityhub_findings", return_value=[]):
-                    with patch(
-                        "index.collect_access_analyzer_findings", return_value=[]
-                    ):
+            # Mock all the necessary functions directly
+            with patch(
+                "index.collect_iam_findings",
+                return_value=[
+                    {
+                        "id": "iam-1",
+                        "category": "IAM",
+                        "severity": "Medium",
+                        "resource_type": "IAM Role",
+                        "resource_id": "test-role",
+                        "description": "Test IAM finding",
+                        "recommendation": "Test recommendation",
+                        "compliance": "CIS 1.2",
+                        "detection_date": "2023-01-01T00:00:00",
+                    }
+                ],
+            ):
+                with patch("index.collect_scp_findings", return_value=[]):
+                    with patch("index.collect_securityhub_findings", return_value=[]):
                         with patch(
-                            "index.collect_cloudtrail_findings", return_value=[]
+                            "index.collect_access_analyzer_findings", return_value=[]
                         ):
                             with patch(
-                                "index.generate_ai_narrative",
-                                return_value="Test narrative",
+                                "index.collect_cloudtrail_findings", return_value=[]
                             ):
                                 with patch(
-                                    "index.send_email_with_attachment"
-                                ) as mock_send_email:
-                                    # Call the handler
-                                    response = index.handler({}, {})
+                                    "index.generate_ai_narrative",
+                                    return_value="Test narrative",
+                                ):
+                                    with patch(
+                                        "index.send_email_with_attachment"
+                                    ) as mock_send_email:
+                                        # Call the handler
+                                        response = index.handler({}, {})
 
-                                    # Verify the response
-                                    assert response["statusCode"] == 200
-                                    assert (
-                                        "AWS Access Review completed successfully"
-                                        in response["body"]
-                                    )
+                                        # Verify the response
+                                        assert response["statusCode"] == 200
+                                        assert (
+                                            "AWS Access Review completed successfully"
+                                            in response["body"]
+                                        )
 
-                                    # Verify email was sent
-                                    mock_send_email.assert_called_once()
+                                        # Verify email was sent
+                                        mock_send_email.assert_called_once()
+    finally:
+        # Cleanup - delete the test bucket
+        try:
+            objects = s3.list_objects_v2(Bucket="test-report-bucket").get(
+                "Contents", []
+            )
+            for obj in objects:
+                s3.delete_object(Bucket="test-report-bucket", Key=obj["Key"])
+            s3.delete_bucket(Bucket="test-report-bucket")
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
 
 
 def test_collect_iam_findings():
@@ -159,23 +179,44 @@ def test_collect_cloudtrail_findings():
 def test_handler_exception_handling(lambda_environment):
     """Test the Lambda handler's exception handling."""
     # Mock boto3.client to raise an exception
-    with patch("boto3.client", side_effect=Exception("Test exception")):
-        try:
-            # Call the handler
-            response = index.handler({}, {})
+    mock_patch = None
+    try:
+        mock_patch = patch("boto3.client", side_effect=Exception("Test exception"))
+        mock_client = mock_patch.start()
 
-            # Verify the response
-            assert response["statusCode"] == 500
-            assert "Error" in response["body"]
-            assert "Test exception" in response["body"]
-        except Exception as e:
-            # If the handler doesn't catch the exception, we'll catch it here
-            # and verify it's the expected exception
-            assert str(e) == "Test exception"
+        # Call the handler
+        response = index.handler({}, {})
+
+        # Verify the response
+        assert response["statusCode"] == 500
+        assert "Error" in response["body"]
+        assert "Test exception" in response["body"]
+    except Exception as e:
+        # If the handler doesn't catch the exception, we'll catch it here
+        # and verify it's the expected exception
+        assert str(e) == "Test exception"
+    finally:
+        # Ensure the mock is stopped to avoid affecting other tests
+        if mock_patch:
+            mock_patch.stop()
 
 
 class TestHandler(unittest.TestCase):
     """Test cases for the Lambda handler."""
+
+    def setUp(self):
+        self.patches = []
+
+    def tearDown(self):
+        # Clean up all patches
+        for p in self.patches:
+            p.stop()
+        self.patches.clear()
+
+    def create_patch(self, target):
+        patcher = patch(target)
+        self.patches.append(patcher)
+        return patcher.start()
 
     @patch("index.collect_iam_findings")
     @patch("index.collect_securityhub_findings")
@@ -219,26 +260,30 @@ class TestHandler(unittest.TestCase):
         # Mock the S3 upload
         mock_upload_to_s3.return_value = "s3://test-bucket/test-report.csv"
 
-        # Call the handler
-        event = {}
-        context = MagicMock()
-        response = index.handler(event, context)
+        try:
+            # Call the handler
+            event = {}
+            context = MagicMock()
+            response = index.handler(event, context)
 
-        # Assertions
-        self.assertEqual(response["statusCode"], 200)
-        self.assertIn("message", response["body"])
-        self.assertIn("reportUrl", response["body"])
+            # Assertions
+            self.assertEqual(response["statusCode"], 200)
+            self.assertIn("message", response["body"])
+            self.assertIn("reportUrl", response["body"])
 
-        # Verify all the functions were called
-        mock_collect_iam_findings.assert_called_once()
-        mock_collect_securityhub_findings.assert_called_once()
-        mock_collect_access_analyzer_findings.assert_called_once()
-        mock_collect_cloudtrail_findings.assert_called_once()
-        mock_collect_scp_findings.assert_called_once()
-        mock_generate_ai_narrative.assert_called_once()
-        mock_generate_csv_report.assert_called_once()
-        mock_upload_to_s3.assert_called_once()
-        mock_send_email.assert_called_once()
+            # Verify all the functions were called
+            mock_collect_iam_findings.assert_called_once()
+            mock_collect_securityhub_findings.assert_called_once()
+            mock_collect_access_analyzer_findings.assert_called_once()
+            mock_collect_cloudtrail_findings.assert_called_once()
+            mock_collect_scp_findings.assert_called_once()
+            mock_generate_ai_narrative.assert_called_once()
+            mock_generate_csv_report.assert_called_once()
+            mock_upload_to_s3.assert_called_once()
+            mock_send_email.assert_called_once()
+        finally:
+            # Clean up any resources that might have been created
+            pass
 
 
 class TestIAMFindings(unittest.TestCase):
