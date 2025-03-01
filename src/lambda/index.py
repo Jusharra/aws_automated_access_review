@@ -114,10 +114,7 @@ def handler(event, context):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         csv_key = f"reports/aws-access-review-{timestamp}.csv"
         s3.put_object(
-            Bucket=report_bucket,
-            Key=csv_key,
-            Body=csv_buffer.getvalue(),
-            ContentType="text/csv"
+            Bucket=report_bucket, Key=csv_key, Body=csv_buffer.getvalue(), ContentType="text/csv"
         )
 
         # Generate AI narrative using Bedrock
@@ -132,18 +129,12 @@ def handler(event, context):
             f"aws-access-review-{timestamp}.csv",
         )
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps("AWS Access Review completed successfully")
-        }
+        return {"statusCode": 200, "body": json.dumps("AWS Access Review completed successfully")}
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error in AWS Access Review: {error_msg}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps(f"Error: {error_msg}")
-        }
+        return {"statusCode": 500, "body": json.dumps(f"Error: {error_msg}")}
 
 
 def collect_iam_findings(iam):
@@ -182,19 +173,21 @@ def collect_iam_findings(iam):
                 # Check MFA devices
                 mfa_response = iam.list_mfa_devices(UserName=username)
                 if not mfa_response["MFADevices"]:
-                    findings.append({
-                        "id": f"IAM-001-{username}",
-                        "category": "IAM",
-                        "severity": "High",
-                        "resource_type": "IAM User",
-                        "resource_id": username,
-                        "description": (
-                            f"User {username} has console access but no MFA enabled"
-                        ),
-                        "recommendation": "Enable MFA for all users with console access",
-                        "compliance": "CIS 1.2, AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"IAM-001-{username}",
+                            "category": "IAM",
+                            "severity": "High",
+                            "resource_type": "IAM User",
+                            "resource_id": username,
+                            "description": (
+                                f"User {username} has console access but no MFA enabled"
+                            ),
+                            "recommendation": "Enable MFA for all users with console access",
+                            "compliance": "CIS 1.2, AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
             # Check for access keys and their age
             keys_response = iam.list_access_keys(UserName=username)
@@ -203,25 +196,25 @@ def collect_iam_findings(iam):
                 key_created = key["CreateDate"]
 
                 # Check key age
-                key_age_days = (
-                    datetime.datetime.now(datetime.timezone.utc) - key_created
-                ).days
+                key_age_days = (datetime.datetime.now(datetime.timezone.utc) - key_created).days
 
                 if key_age_days > 90:
-                    findings.append({
-                        "id": f"IAM-002-{key_id}",
-                        "category": "IAM",
-                        "severity": "Medium",
-                        "resource_type": "IAM Access Key",
-                        "resource_id": f"{username}/{key_id}",
-                        "description": (
-                            f"Access key {key_id} for user {username} is "
-                            f"{key_age_days} days old"
-                        ),
-                        "recommendation": "Rotate access keys at least every 90 days",
-                        "compliance": "CIS 1.4, AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"IAM-002-{key_id}",
+                            "category": "IAM",
+                            "severity": "Medium",
+                            "resource_type": "IAM Access Key",
+                            "resource_id": f"{username}/{key_id}",
+                            "description": (
+                                f"Access key {key_id} for user {username} is "
+                                f"{key_age_days} days old"
+                            ),
+                            "recommendation": "Rotate access keys at least every 90 days",
+                            "compliance": "CIS 1.4, AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
             # Check for wide permissions (admin access)
             attached_policies = iam.list_attached_user_policies(UserName=username)[
@@ -232,20 +225,22 @@ def collect_iam_findings(iam):
                     "admin" in policy["PolicyName"].lower()
                     or "administrator" in policy["PolicyName"].lower()
                 ):
-                    findings.append({
-                        "id": f"IAM-003-{username}",
-                        "category": "IAM",
-                        "severity": "Medium",
-                        "resource_type": "IAM User",
-                        "resource_id": username,
-                        "description": (
-                            f'User {username} has potentially wide privileges via '
-                            f'policy {policy["PolicyName"]}'
-                        ),
-                        "recommendation": "Apply least privilege principle to IAM users",
-                        "compliance": "CIS 1.16, AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"IAM-003-{username}",
+                            "category": "IAM",
+                            "severity": "Medium",
+                            "resource_type": "IAM User",
+                            "resource_id": username,
+                            "description": (
+                                f"User {username} has potentially wide privileges via "
+                                f'policy {policy["PolicyName"]}'
+                            ),
+                            "recommendation": "Apply least privilege principle to IAM users",
+                            "compliance": "CIS 1.16, AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
         # Check for unused roles
         response = iam.list_roles()
@@ -256,29 +251,26 @@ def collect_iam_findings(iam):
 
         for role in roles:
             role_name = role["RoleName"]
-            if (
-                "service-role/" not in role["Path"]
-                and not role_name.startswith("AWSServiceRole")
-            ):
+            if "service-role/" not in role["Path"] and not role_name.startswith("AWSServiceRole"):
                 last_used_response = (
-                    iam.get_role(RoleName=role_name)
-                    .get("Role", {})
-                    .get("RoleLastUsed", {})
+                    iam.get_role(RoleName=role_name).get("Role", {}).get("RoleLastUsed", {})
                 )
                 if "LastUsedDate" not in last_used_response:
-                    findings.append({
-                        "id": f"IAM-004-{role_name}",
-                        "category": "IAM",
-                        "severity": "Low",
-                        "resource_type": "IAM Role",
-                        "resource_id": role_name,
-                        "description": f"Role {role_name} appears to be unused",
-                        "recommendation": (
-                            "Consider removing unused roles to reduce attack surface"
-                        ),
-                        "compliance": "AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"IAM-004-{role_name}",
+                            "category": "IAM",
+                            "severity": "Low",
+                            "resource_type": "IAM Role",
+                            "resource_id": role_name,
+                            "description": f"Role {role_name} appears to be unused",
+                            "recommendation": (
+                                "Consider removing unused roles to reduce attack surface"
+                            ),
+                            "compliance": "AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
         # Check password policy
         try:
@@ -290,51 +282,57 @@ def collect_iam_findings(iam):
                 or not password_policy.get("RequireNumbers", False)
                 or password_policy.get("MinimumPasswordLength", 0) < 14
             ):
-                findings.append({
-                    "id": "IAM-005",
+                findings.append(
+                    {
+                        "id": "IAM-005",
+                        "category": "IAM",
+                        "severity": "Medium",
+                        "resource_type": "IAM Password Policy",
+                        "resource_id": "account-password-policy",
+                        "description": (
+                            "IAM password policy does not meet security best practices"
+                        ),
+                        "recommendation": (
+                            "Configure a strong password policy requiring at least 14 "
+                            "characters with a mix of character types"
+                        ),
+                        "compliance": "CIS 1.5-1.11, AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
+        except iam.exceptions.NoSuchEntityException:
+            findings.append(
+                {
+                    "id": "IAM-006",
                     "category": "IAM",
-                    "severity": "Medium",
+                    "severity": "High",
                     "resource_type": "IAM Password Policy",
                     "resource_id": "account-password-policy",
-                    "description": (
-                        "IAM password policy does not meet security best practices"
-                    ),
-                    "recommendation": (
-                        "Configure a strong password policy requiring at least 14 "
-                        "characters with a mix of character types"
-                    ),
+                    "description": "No IAM password policy is set for the account",
+                    "recommendation": "Configure a strong password policy",
                     "compliance": "CIS 1.5-1.11, AWS Well-Architected",
                     "detection_date": datetime.datetime.now().isoformat(),
-                })
-        except iam.exceptions.NoSuchEntityException:
-            findings.append({
-                "id": "IAM-006",
-                "category": "IAM",
-                "severity": "High",
-                "resource_type": "IAM Password Policy",
-                "resource_id": "account-password-policy",
-                "description": "No IAM password policy is set for the account",
-                "recommendation": "Configure a strong password policy",
-                "compliance": "CIS 1.5-1.11, AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat(),
-            })
+                }
+            )
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error collecting IAM findings: {error_msg}")
-        findings.append({
-            "id": "IAM-ERROR",
-            "category": "IAM",
-            "severity": "Medium",
-            "resource_type": "IAM Service",
-            "resource_id": "error",
-            "description": f"Error collecting IAM findings: {error_msg}",
-            "recommendation": (
-                "Check Lambda execution role permissions for IAM ReadOnly access"
-            ),
-            "compliance": "N/A",
-            "detection_date": datetime.datetime.now().isoformat(),
-        })
+        findings.append(
+            {
+                "id": "IAM-ERROR",
+                "category": "IAM",
+                "severity": "Medium",
+                "resource_type": "IAM Service",
+                "resource_id": "error",
+                "description": f"Error collecting IAM findings: {error_msg}",
+                "recommendation": (
+                    "Check Lambda execution role permissions for IAM ReadOnly access"
+                ),
+                "compliance": "N/A",
+                "detection_date": datetime.datetime.now().isoformat(),
+            }
+        )
 
     print(f"Collected {len(findings)} IAM findings")
     return findings
@@ -353,23 +351,25 @@ def collect_scp_findings(org):
         organization = org.describe_organization().get("Organization", {})
 
         if not organization:
-            findings.append({
-                "id": "SCP-NOT-USED",
-                "category": "SCP",
-                "severity": "Informational",
-                "resource_type": "AWS Organizations",
-                "resource_id": "none",
-                "description": (
-                    "AWS Organizations is not being used or the Lambda role lacks "
-                    "permissions"
-                ),
-                "recommendation": (
-                    "Consider using AWS Organizations with SCPs to enforce security "
-                    "guardrails"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat(),
-            })
+            findings.append(
+                {
+                    "id": "SCP-NOT-USED",
+                    "category": "SCP",
+                    "severity": "Informational",
+                    "resource_type": "AWS Organizations",
+                    "resource_id": "none",
+                    "description": (
+                        "AWS Organizations is not being used or the Lambda role lacks "
+                        "permissions"
+                    ),
+                    "recommendation": (
+                        "Consider using AWS Organizations with SCPs to enforce security "
+                        "guardrails"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
             return findings
 
         # Get organization roots
@@ -387,20 +387,21 @@ def collect_scp_findings(org):
 
         # If there are no SCPs (beyond the default FullAWSAccess), flag it
         if len(policies) <= 1:
-            findings.append({
-                "id": "SCP-001",
-                "category": "SCP",
-                "severity": "Medium",
-                "resource_type": "Service Control Policy",
-                "resource_id": "none",
-                "description": "No custom SCPs detected in the organization",
-                "recommendation": (
-                    "Implement SCPs to enforce security guardrails across the "
-                    "organization"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat(),
-            })
+            findings.append(
+                {
+                    "id": "SCP-001",
+                    "category": "SCP",
+                    "severity": "Medium",
+                    "resource_type": "Service Control Policy",
+                    "resource_id": "none",
+                    "description": "No custom SCPs detected in the organization",
+                    "recommendation": (
+                        "Implement SCPs to enforce security guardrails across the " "organization"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
 
         # Analyze each policy
         for policy in policies:
@@ -452,88 +453,97 @@ def collect_scp_findings(org):
 
                 # Add findings based on policy analysis
                 if not has_deny_root:
-                    findings.append({
-                        "id": f"SCP-ROOT-{policy_id[-6:]}",
-                        "category": "SCP",
-                        "severity": "Medium",
-                        "resource_type": "Service Control Policy",
-                        "resource_id": policy_name,
-                        "description": (
-                            f'SCP "{policy_name}" does not appear to restrict root user '
-                            "activities"
-                        ),
-                        "recommendation": (
-                            "Add statements to deny actions for root users in member "
-                            "accounts"
-                        ),
-                        "compliance": "AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"SCP-ROOT-{policy_id[-6:]}",
+                            "category": "SCP",
+                            "severity": "Medium",
+                            "resource_type": "Service Control Policy",
+                            "resource_id": policy_name,
+                            "description": (
+                                f'SCP "{policy_name}" does not appear to restrict root user '
+                                "activities"
+                            ),
+                            "recommendation": (
+                                "Add statements to deny actions for root users in member "
+                                "accounts"
+                            ),
+                            "compliance": "AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
                 if not has_security_services:
-                    findings.append({
-                        "id": f"SCP-SECURITY-{policy_id[-6:]}",
+                    findings.append(
+                        {
+                            "id": f"SCP-SECURITY-{policy_id[-6:]}",
+                            "category": "SCP",
+                            "severity": "Low",
+                            "resource_type": "Service Control Policy",
+                            "resource_id": policy_name,
+                            "description": (
+                                f'SCP "{policy_name}" does not appear to protect security '
+                                "services"
+                            ),
+                            "recommendation": (
+                                "Add statements to prevent disabling of security services"
+                            ),
+                            "compliance": "AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
+
+            except json.JSONDecodeError:
+                findings.append(
+                    {
+                        "id": f"SCP-FORMAT-{policy_id[-6:]}",
                         "category": "SCP",
                         "severity": "Low",
                         "resource_type": "Service Control Policy",
                         "resource_id": policy_name,
-                        "description": (
-                            f'SCP "{policy_name}" does not appear to protect security '
-                            "services"
-                        ),
-                        "recommendation": (
-                            "Add statements to prevent disabling of security services"
-                        ),
+                        "description": f'SCP "{policy_name}" has invalid JSON format',
+                        "recommendation": "Review and correct the SCP JSON format",
                         "compliance": "AWS Well-Architected",
                         "detection_date": datetime.datetime.now().isoformat(),
-                    })
-
-            except json.JSONDecodeError:
-                findings.append({
-                    "id": f"SCP-FORMAT-{policy_id[-6:]}",
-                    "category": "SCP",
-                    "severity": "Low",
-                    "resource_type": "Service Control Policy",
-                    "resource_id": policy_name,
-                    "description": f'SCP "{policy_name}" has invalid JSON format',
-                    "recommendation": "Review and correct the SCP JSON format",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat(),
-                })
+                    }
+                )
 
         # If we've analyzed SCPs but found no issues, add a positive note
         if policies and len(findings) == 0:
-            findings.append({
-                "id": "SCP-POSITIVE-001",
-                "category": "SCP",
-                "severity": "Informational",
-                "resource_type": "Service Control Policy",
-                "resource_id": "organization",
-                "description": "Organization SCPs follow security best practices",
-                "recommendation": (
-                    "Continue to maintain SCPs in line with evolving security needs"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat(),
-            })
+            findings.append(
+                {
+                    "id": "SCP-POSITIVE-001",
+                    "category": "SCP",
+                    "severity": "Informational",
+                    "resource_type": "Service Control Policy",
+                    "resource_id": "organization",
+                    "description": "Organization SCPs follow security best practices",
+                    "recommendation": (
+                        "Continue to maintain SCPs in line with evolving security needs"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error collecting SCP findings: {error_msg}")
-        findings.append({
-            "id": "SCP-ERROR",
-            "category": "SCP",
-            "severity": "Medium",
-            "resource_type": "Organizations Service",
-            "resource_id": "error",
-            "description": f"Error analyzing SCPs: {error_msg}",
-            "recommendation": (
-                "Check Lambda execution role permissions for Organizations ReadOnly "
-                "access"
-            ),
-            "compliance": "N/A",
-            "detection_date": datetime.datetime.now().isoformat(),
-        })
+        findings.append(
+            {
+                "id": "SCP-ERROR",
+                "category": "SCP",
+                "severity": "Medium",
+                "resource_type": "Organizations Service",
+                "resource_id": "error",
+                "description": f"Error analyzing SCPs: {error_msg}",
+                "recommendation": (
+                    "Check Lambda execution role permissions for Organizations ReadOnly " "access"
+                ),
+                "compliance": "N/A",
+                "detection_date": datetime.datetime.now().isoformat(),
+            }
+        )
 
     print(f"Collected {len(findings)} SCP findings")
     return findings
@@ -549,24 +559,24 @@ def collect_securityhub_findings(securityhub):
 
     try:
         # Check if Security Hub is enabled by retrieving enabled standards
-        enabled_standards = securityhub.get_enabled_standards().get(
-            "StandardsSubscriptions", []
-        )
+        enabled_standards = securityhub.get_enabled_standards().get("StandardsSubscriptions", [])
 
         if not enabled_standards:
-            findings.append({
-                "id": "SECHUB-NOT-ENABLED",
-                "category": "SecurityHub",
-                "severity": "High",
-                "resource_type": "AWS Security Hub",
-                "resource_id": "none",
-                "description": "Security Hub is not enabled in this account",
-                "recommendation": (
-                    "Enable Security Hub and at least the CIS AWS Foundations standard"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat()
-            })
+            findings.append(
+                {
+                    "id": "SECHUB-NOT-ENABLED",
+                    "category": "SecurityHub",
+                    "severity": "High",
+                    "resource_type": "AWS Security Hub",
+                    "resource_id": "none",
+                    "description": "Security Hub is not enabled in this account",
+                    "recommendation": (
+                        "Enable Security Hub and at least the CIS AWS Foundations standard"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
             return findings
 
         # Get findings paginator
@@ -579,9 +589,9 @@ def collect_securityhub_findings(securityhub):
             "WorkflowStatus": [{"Value": "NEW", "Comparison": "EQUALS"}],
             "SeverityLabel": [
                 {"Value": "HIGH", "Comparison": "EQUALS"},
-                {"Value": "CRITICAL", "Comparison": "EQUALS"}
+                {"Value": "CRITICAL", "Comparison": "EQUALS"},
             ],
-            "ResourceType": [{"Value": "AwsIam", "Comparison": "PREFIX"}]
+            "ResourceType": [{"Value": "AwsIam", "Comparison": "PREFIX"}],
         }
 
         # Get findings pages
@@ -590,48 +600,54 @@ def collect_securityhub_findings(securityhub):
         # Process findings
         for page in findings_pages:
             for finding in page.get("Findings", [])[:50]:  # Limit to first 50
-                findings.append({
-                    "id": finding.get("Id", "")[-12:],
-                    "category": "SecurityHub",
-                    "severity": finding.get("Severity", {}).get("Label", "MEDIUM"),
-                    "resource_type": finding.get("Resources", [{}])[0].get("Type", ""),
-                    "resource_id": finding.get("Resources", [{}])[0].get("Id", ""),
-                    "description": finding.get("Description", ""),
-                    "recommendation": finding.get("Remediation", {}).get(
-                        "Recommendation", {}
-                    ).get("Text", "Review finding in Security Hub console"),
-                    "compliance": finding.get("Compliance", {}).get("Status", ""),
-                    "detection_date": finding.get("FirstObservedAt", "")
-                })
+                findings.append(
+                    {
+                        "id": finding.get("Id", "")[-12:],
+                        "category": "SecurityHub",
+                        "severity": finding.get("Severity", {}).get("Label", "MEDIUM"),
+                        "resource_type": finding.get("Resources", [{}])[0].get("Type", ""),
+                        "resource_id": finding.get("Resources", [{}])[0].get("Id", ""),
+                        "description": finding.get("Description", ""),
+                        "recommendation": finding.get("Remediation", {})
+                        .get("Recommendation", {})
+                        .get("Text", "Review finding in Security Hub console"),
+                        "compliance": finding.get("Compliance", {}).get("Status", ""),
+                        "detection_date": finding.get("FirstObservedAt", ""),
+                    }
+                )
 
         # If no findings detected, add a positive note
         if not findings:
-            findings.append({
-                "id": "SECHUB-POSITIVE-001",
-                "category": "SecurityHub",
-                "severity": "Informational",
-                "resource_type": "AWS Security Hub",
-                "resource_id": "none",
-                "description": "No high/critical IAM-related findings detected",
-                "recommendation": "Continue monitoring Security Hub findings",
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat()
-            })
+            findings.append(
+                {
+                    "id": "SECHUB-POSITIVE-001",
+                    "category": "SecurityHub",
+                    "severity": "Informational",
+                    "resource_type": "AWS Security Hub",
+                    "resource_id": "none",
+                    "description": "No high/critical IAM-related findings detected",
+                    "recommendation": "Continue monitoring Security Hub findings",
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error collecting Security Hub findings: {error_msg}")
-        findings.append({
-            "id": "SECHUB-ERROR",
-            "category": "SecurityHub",
-            "severity": "Medium",
-            "resource_type": "AWS Security Hub",
-            "resource_id": "error",
-            "description": f"Error collecting findings: {error_msg}",
-            "recommendation": "Check Lambda role permissions for Security Hub",
-            "compliance": "N/A",
-            "detection_date": datetime.datetime.now().isoformat()
-        })
+        findings.append(
+            {
+                "id": "SECHUB-ERROR",
+                "category": "SecurityHub",
+                "severity": "Medium",
+                "resource_type": "AWS Security Hub",
+                "resource_id": "error",
+                "description": f"Error collecting findings: {error_msg}",
+                "recommendation": "Check Lambda role permissions for Security Hub",
+                "compliance": "N/A",
+                "detection_date": datetime.datetime.now().isoformat(),
+            }
+        )
 
     print(f"Collected {len(findings)} Security Hub findings")
     return findings
@@ -651,20 +667,22 @@ def collect_access_analyzer_findings(access_analyzer):
         analyzers = analyzers_response.get("analyzers", [])
 
         if not analyzers:
-            findings.append({
-                "id": "AA-001",
-                "category": "Access Analyzer",
-                "severity": "Medium",
-                "resource_type": "IAM Access Analyzer",
-                "resource_id": "none",
-                "description": "No IAM Access Analyzer is configured for this account",
-                "recommendation": (
-                    "Enable IAM Access Analyzer to detect resources that are shared "
-                    "externally"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat(),
-            })
+            findings.append(
+                {
+                    "id": "AA-001",
+                    "category": "Access Analyzer",
+                    "severity": "Medium",
+                    "resource_type": "IAM Access Analyzer",
+                    "resource_id": "none",
+                    "description": "No IAM Access Analyzer is configured for this account",
+                    "recommendation": (
+                        "Enable IAM Access Analyzer to detect resources that are shared "
+                        "externally"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
             return findings
 
         # For each analyzer, get active findings
@@ -675,8 +693,7 @@ def collect_access_analyzer_findings(access_analyzer):
             # List active findings for this analyzer
             list_findings_paginator = access_analyzer.get_paginator("list_findings")
             findings_pages = list_findings_paginator.paginate(
-                analyzerArn=analyzer_arn,
-                filter={"status": {"eq": ["ACTIVE"]}}
+                analyzerArn=analyzer_arn, filter={"status": {"eq": ["ACTIVE"]}}
             )
 
             aa_findings_count = 0
@@ -685,8 +702,7 @@ def collect_access_analyzer_findings(access_analyzer):
                 for finding_id in page.get("findings", []):
                     # Get detailed finding information
                     finding_detail = access_analyzer.get_finding(
-                        analyzerArn=analyzer_arn,
-                        id=finding_id["id"]
+                        analyzerArn=analyzer_arn, id=finding_id["id"]
                     )
 
                     resource_type = finding_detail.get("resourceType", "Unknown")
@@ -705,24 +721,26 @@ def collect_access_analyzer_findings(access_analyzer):
                         is_public = True
                         severity = "Critical"
 
-                    findings.append({
-                        "id": f"AA-{finding_id['id']}",
-                        "category": "Access Analyzer",
-                        "severity": severity,
-                        "resource_type": resource_type,
-                        "resource_id": resource,
-                        "description": (
-                            f"{resource_type} {resource} "
-                            f"{'is publicly accessible' if is_public else 'has external access'} "
-                            "that may not be intended"
-                        ),
-                        "recommendation": (
-                            f"Review the permissions for this {resource_type} "
-                            "and restrict access if unintended"
-                        ),
-                        "compliance": "AWS Well-Architected, CIS AWS Foundations",
-                        "detection_date": datetime.datetime.now().isoformat(),
-                    })
+                    findings.append(
+                        {
+                            "id": f"AA-{finding_id['id']}",
+                            "category": "Access Analyzer",
+                            "severity": severity,
+                            "resource_type": resource_type,
+                            "resource_id": resource,
+                            "description": (
+                                f"{resource_type} {resource} "
+                                f"{'public' if is_public else 'has external access'}"
+                                " that may not be intended"
+                            ),
+                            "recommendation": (
+                                f"Review the permissions for this {resource_type} "
+                                "and restrict access if unintended"
+                            ),
+                            "compliance": "AWS Well-Architected, CIS AWS Foundations",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
                     aa_findings_count += 1
 
@@ -733,37 +751,40 @@ def collect_access_analyzer_findings(access_analyzer):
 
             # If there were no findings, add a positive finding
             if aa_findings_count == 0:
-                findings.append({
-                    "id": f"AA-POSITIVE-{analyzer_name}",
-                    "category": "Access Analyzer",
-                    "severity": "Informational",
-                    "resource_type": "IAM Access Analyzer",
-                    "resource_id": analyzer_name,
-                    "description": (
-                        "No external access findings detected by IAM Access Analyzer"
-                    ),
-                    "recommendation": "Continue monitoring with IAM Access Analyzer",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat(),
-                })
+                findings.append(
+                    {
+                        "id": f"AA-POSITIVE-{analyzer_name}",
+                        "category": "Access Analyzer",
+                        "severity": "Informational",
+                        "resource_type": "IAM Access Analyzer",
+                        "resource_id": analyzer_name,
+                        "description": (
+                            "No external access findings detected by IAM Access Analyzer"
+                        ),
+                        "recommendation": "Continue monitoring with IAM Access Analyzer",
+                        "compliance": "AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error collecting Access Analyzer findings: {error_msg}")
-        findings.append({
-            "id": "AA-ERROR",
-            "category": "Access Analyzer",
-            "severity": "Medium",
-            "resource_type": "Access Analyzer Service",
-            "resource_id": "error",
-            "description": f"Error collecting Access Analyzer findings: {error_msg}",
-            "recommendation": (
-                "Check Lambda execution role permissions for Access Analyzer "
-                "ReadOnly access"
-            ),
-            "compliance": "N/A",
-            "detection_date": datetime.datetime.now().isoformat(),
-        })
+        findings.append(
+            {
+                "id": "AA-ERROR",
+                "category": "Access Analyzer",
+                "severity": "Medium",
+                "resource_type": "Access Analyzer Service",
+                "resource_id": "error",
+                "description": f"Error collecting Access Analyzer findings: {error_msg}",
+                "recommendation": (
+                    "Check Lambda execution role permissions for Access Analyzer " "ReadOnly access"
+                ),
+                "compliance": "N/A",
+                "detection_date": datetime.datetime.now().isoformat(),
+            }
+        )
 
     print(f"Collected {len(findings)} Access Analyzer findings")
     return findings
@@ -782,19 +803,21 @@ def collect_cloudtrail_findings(cloudtrail, s3):
         trails = cloudtrail.describe_trails().get("trailList", [])
 
         if not trails:
-            findings.append({
-                "id": "CT-NOT-ENABLED",
-                "category": "CloudTrail",
-                "severity": "High",
-                "resource_type": "AWS CloudTrail",
-                "resource_id": "none",
-                "description": "CloudTrail is not enabled in this account",
-                "recommendation": (
-                    "Enable CloudTrail to track API activity across your AWS account"
-                ),
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat()
-            })
+            findings.append(
+                {
+                    "id": "CT-NOT-ENABLED",
+                    "category": "CloudTrail",
+                    "severity": "High",
+                    "resource_type": "AWS CloudTrail",
+                    "resource_id": "none",
+                    "description": "CloudTrail is not enabled in this account",
+                    "recommendation": (
+                        "Enable CloudTrail to track API activity across your AWS account"
+                    ),
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
             return findings
 
         # Check each trail's configuration
@@ -806,127 +829,140 @@ def collect_cloudtrail_findings(cloudtrail, s3):
             # Check if logging is enabled
             status = cloudtrail.get_trail_status(Name=trail_name)
             if not status.get("IsLogging", False):
-                findings.append({
-                    "id": f"CT-LOGGING-{trail_name[:8]}",
-                    "category": "CloudTrail",
-                    "severity": "High",
-                    "resource_type": "AWS CloudTrail",
-                    "resource_id": trail_arn,
-                    "description": f"CloudTrail {trail_name} is not actively logging",
-                    "recommendation": "Enable logging for the CloudTrail trail",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat()
-                })
+                findings.append(
+                    {
+                        "id": f"CT-LOGGING-{trail_name[:8]}",
+                        "category": "CloudTrail",
+                        "severity": "High",
+                        "resource_type": "AWS CloudTrail",
+                        "resource_id": trail_arn,
+                        "description": f"CloudTrail {trail_name} is not actively logging",
+                        "recommendation": "Enable logging for the CloudTrail trail",
+                        "compliance": "AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
 
             # Check multi-region logging
             if not trail.get("IsMultiRegionTrail", False):
-                findings.append({
-                    "id": f"CT-REGION-{trail_name[:8]}",
-                    "category": "CloudTrail",
-                    "severity": "Medium",
-                    "resource_type": "AWS CloudTrail",
-                    "resource_id": trail_arn,
-                    "description": (
-                        f"CloudTrail {trail_name} is not configured for multi-region"
-                    ),
-                    "recommendation": "Enable multi-region logging for complete coverage",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat()
-                })
+                findings.append(
+                    {
+                        "id": f"CT-REGION-{trail_name[:8]}",
+                        "category": "CloudTrail",
+                        "severity": "Medium",
+                        "resource_type": "AWS CloudTrail",
+                        "resource_id": trail_arn,
+                        "description": (
+                            f"CloudTrail {trail_name} is not configured for multi-region"
+                        ),
+                        "recommendation": "Enable multi-region logging for complete coverage",
+                        "compliance": "AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
 
             # Check management events
-            selectors = cloudtrail.get_event_selectors(
-                TrailName=trail_name
-            ).get("EventSelectors", [])
+            selectors = cloudtrail.get_event_selectors(TrailName=trail_name).get(
+                "EventSelectors", []
+            )
 
             management_events_enabled = False
             for selector in selectors:
-                if (
-                    selector.get("ReadWriteType") == "All"
-                    and selector.get("IncludeManagementEvents", False)
+                if selector.get("ReadWriteType") == "All" and selector.get(
+                    "IncludeManagementEvents", False
                 ):
                     management_events_enabled = True
                     break
 
             if not management_events_enabled:
-                findings.append({
-                    "id": f"CT-MGMT-{trail_name[:8]}",
-                    "category": "CloudTrail",
-                    "severity": "Medium",
-                    "resource_type": "AWS CloudTrail",
-                    "resource_id": trail_arn,
-                    "description": (
-                        f"CloudTrail {trail_name} is not logging all management events"
-                    ),
-                    "recommendation": "Enable logging of all management events",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat()
-                })
+                findings.append(
+                    {
+                        "id": f"CT-MGMT-{trail_name[:8]}",
+                        "category": "CloudTrail",
+                        "severity": "Medium",
+                        "resource_type": "AWS CloudTrail",
+                        "resource_id": trail_arn,
+                        "description": (
+                            f"CloudTrail {trail_name} is not logging all management events"
+                        ),
+                        "recommendation": "Enable logging of all management events",
+                        "compliance": "AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
 
             # Check log file validation
             if not trail.get("LogFileValidationEnabled", False):
-                findings.append({
-                    "id": f"CT-VALID-{trail_name[:8]}",
-                    "category": "CloudTrail",
-                    "severity": "Low",
-                    "resource_type": "AWS CloudTrail",
-                    "resource_id": trail_arn,
-                    "description": (
-                        f"CloudTrail {trail_name} does not have log validation enabled"
-                    ),
-                    "recommendation": "Enable log file validation for integrity",
-                    "compliance": "AWS Well-Architected",
-                    "detection_date": datetime.datetime.now().isoformat()
-                })
+                findings.append(
+                    {
+                        "id": f"CT-VALID-{trail_name[:8]}",
+                        "category": "CloudTrail",
+                        "severity": "Low",
+                        "resource_type": "AWS CloudTrail",
+                        "resource_id": trail_arn,
+                        "description": (
+                            f"CloudTrail {trail_name} does not have log validation enabled"
+                        ),
+                        "recommendation": "Enable log file validation for integrity",
+                        "compliance": "AWS Well-Architected",
+                        "detection_date": datetime.datetime.now().isoformat(),
+                    }
+                )
 
             # Check S3 bucket encryption
             try:
                 s3.get_bucket_encryption(Bucket=s3_bucket)
             except Exception as e:
                 if "ServerSideEncryptionConfigurationNotFoundError" in str(e):
-                    findings.append({
-                        "id": f"CT-ENC-{trail_name[:8]}",
-                        "category": "CloudTrail",
-                        "severity": "Medium",
-                        "resource_type": "AWS CloudTrail",
-                        "resource_id": trail_arn,
-                        "description": (
-                            f"S3 bucket {s3_bucket} for CloudTrail {trail_name} "
-                            "is not encrypted"
-                        ),
-                        "recommendation": "Enable encryption for CloudTrail S3 bucket",
-                        "compliance": "AWS Well-Architected",
-                        "detection_date": datetime.datetime.now().isoformat()
-                    })
+                    findings.append(
+                        {
+                            "id": f"CT-ENC-{trail_name[:8]}",
+                            "category": "CloudTrail",
+                            "severity": "Medium",
+                            "resource_type": "AWS CloudTrail",
+                            "resource_id": trail_arn,
+                            "description": (
+                                f"S3 bucket {s3_bucket} for CloudTrail {trail_name} "
+                                "is not encrypted"
+                            ),
+                            "recommendation": "Enable encryption for CloudTrail S3 bucket",
+                            "compliance": "AWS Well-Architected",
+                            "detection_date": datetime.datetime.now().isoformat(),
+                        }
+                    )
 
         # If no findings detected, add a positive note
         if not findings:
-            findings.append({
-                "id": "CT-POSITIVE-001",
-                "category": "CloudTrail",
-                "severity": "Informational",
-                "resource_type": "AWS CloudTrail",
-                "resource_id": "account",
-                "description": "CloudTrail is properly configured",
-                "recommendation": "Continue monitoring CloudTrail configuration",
-                "compliance": "AWS Well-Architected",
-                "detection_date": datetime.datetime.now().isoformat()
-            })
+            findings.append(
+                {
+                    "id": "CT-POSITIVE-001",
+                    "category": "CloudTrail",
+                    "severity": "Informational",
+                    "resource_type": "AWS CloudTrail",
+                    "resource_id": "account",
+                    "description": "CloudTrail is properly configured",
+                    "recommendation": "Continue monitoring CloudTrail configuration",
+                    "compliance": "AWS Well-Architected",
+                    "detection_date": datetime.datetime.now().isoformat(),
+                }
+            )
 
     except Exception as e:
         error_msg = str(e)
         print(f"Error collecting CloudTrail findings: {error_msg}")
-        findings.append({
-            "id": "CT-ERROR",
-            "category": "CloudTrail",
-            "severity": "Medium",
-            "resource_type": "AWS CloudTrail",
-            "resource_id": "error",
-            "description": f"Error collecting findings: {error_msg}",
-            "recommendation": "Check Lambda role permissions for CloudTrail",
-            "compliance": "N/A",
-            "detection_date": datetime.datetime.now().isoformat()
-        })
+        findings.append(
+            {
+                "id": "CT-ERROR",
+                "category": "CloudTrail",
+                "severity": "Medium",
+                "resource_type": "AWS CloudTrail",
+                "resource_id": "error",
+                "description": f"Error collecting findings: {error_msg}",
+                "recommendation": "Check Lambda role permissions for CloudTrail",
+                "compliance": "N/A",
+                "detection_date": datetime.datetime.now().isoformat(),
+            }
+        )
 
     print(f"Collected {len(findings)} CloudTrail findings")
     return findings
@@ -954,13 +990,7 @@ def generate_ai_narrative(bedrock, findings):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Count findings by severity
-        severity_counts = {
-            "Critical": 0,
-            "High": 0,
-            "Medium": 0,
-            "Low": 0,
-            "Informational": 0
-        }
+        severity_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Informational": 0}
 
         # Count findings by category
         category_counts = {}
@@ -997,11 +1027,7 @@ def generate_ai_narrative(bedrock, findings):
                 positives.append(f"- {finding.get('description')}")
 
         # Sort categories by count
-        sorted_categories = sorted(
-            category_counts.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
 
         # Build the narrative
         narrative = (
@@ -1030,8 +1056,7 @@ def generate_ai_narrative(bedrock, findings):
             )
             if len(key_issues) > 5:
                 narrative += (
-                    f"...and {len(key_issues) - 5} more critical or high severity "
-                    "issues.\n"
+                    f"...and {len(key_issues) - 5} more critical or high severity " "issues.\n"
                 )
 
         if positives:
@@ -1140,15 +1165,12 @@ def verify_email_for_ses(ses_client, email_address):
     """
     try:
         # Check if the email is already verified
-        response = ses_client.get_identity_verification_attributes(
-            Identities=[email_address]
-        )
+        response = ses_client.get_identity_verification_attributes(Identities=[email_address])
 
         # If the email is not in the response or not verified, send verification
         if (
             email_address not in response["VerificationAttributes"]
-            or response["VerificationAttributes"][email_address]["VerificationStatus"]
-            != "Success"
+            or response["VerificationAttributes"][email_address]["VerificationStatus"] != "Success"
         ):
             print(f"Email {email_address} not verified. Sending verification email...")
             ses_client.verify_email_identity(EmailAddress=email_address)
