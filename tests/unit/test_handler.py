@@ -1,9 +1,7 @@
 import os
 import sys
 import pytest
-import boto3
 import unittest
-import json
 from unittest.mock import patch, MagicMock
 
 # Add the lambda directory to the path
@@ -120,7 +118,7 @@ def test_handler_success(s3, ses, lambda_environment):
         print("Patched generate_ai_narrative")
 
         email_patch = patch("index.send_email_with_attachment")
-        mock_email = email_patch.start()
+        email_patch.start()
         patches.append(email_patch)
         print("Patched send_email_with_attachment")
 
@@ -154,9 +152,9 @@ def test_handler_success(s3, ses, lambda_environment):
         for i, p in enumerate(patches):
             try:
                 p.stop()
-                print(f"Stopped patch {i+1}/{len(patches)}")
+                print(f"Stopped patch {i + 1}/{len(patches)}")
             except Exception as e:
-                print(f"Error stopping patch {i+1}/{len(patches)}: {e}")
+                print(f"Error stopping patch {i + 1}/{len(patches)}: {e}")
 
         print("Cleaning up S3 bucket...")
         try:
@@ -311,7 +309,10 @@ def test_collect_scp_findings():
             "Id": "p-12345678",
             "Name": "test-scp",
             "Description": "Test SCP",
-            "Content": '{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":"*","Resource":"*"}]}',
+            "Content": (
+                '{"Version":"2012-10-17","Statement":'
+                '[{"Effect":"Deny","Action":"*","Resource":"*"}]}'
+            ),
             "Type": "SERVICE_CONTROL_POLICY",
         }
     }
@@ -438,9 +439,9 @@ def test_collect_cloudtrail_findings():
         for i, mock in enumerate(mocks_to_cleanup):
             try:
                 mock.reset_mock()
-                print(f"Reset mock {i+1}/{len(mocks_to_cleanup)}")
+                print(f"Reset mock {i + 1}/{len(mocks_to_cleanup)}")
             except Exception as e:
-                print(f"Error resetting mock {i+1}: {e}")
+                print(f"Error resetting mock {i + 1}: {e}")
 
         print("=== FINISHED test_collect_cloudtrail_findings TEST ===")
 
@@ -667,8 +668,13 @@ class TestSecurityHubFindings(unittest.TestCase):
             mock_securityhub.get_enabled_standards.return_value = {
                 "StandardsSubscriptions": [
                     {
-                        "StandardsArn": "arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0",
-                        "StandardsSubscriptionArn": "arn:aws:securityhub:us-east-1:123456789012:subscription/cis-aws-foundations-benchmark/v/1.2.0",
+                        "StandardsArn": (
+                            "arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0"
+                        ),
+                        "StandardsSubscriptionArn": (
+                            "arn:aws:securityhub:us-east-1:123456789012:"
+                            "subscription/cis-aws-foundations-benchmark/v/1.2.0"
+                        ),
                         "StandardsInput": {"string": "string"},
                         "StandardsStatus": "READY",
                     }

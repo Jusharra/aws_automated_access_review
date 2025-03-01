@@ -1,6 +1,4 @@
 import os
-import pytest
-import yaml
 import re
 
 # Import the template file
