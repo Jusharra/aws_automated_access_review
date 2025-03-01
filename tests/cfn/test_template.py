@@ -13,9 +13,6 @@ def template_path():
 
 def test_cfn_lint(template_path):
     """Test the CloudFormation template with cfn-lint."""
-    # Skip this test for now
-    pytest.skip("Skipping cfn-lint test due to YAML formatting issues in the template")
-    
     # Verify the template file exists
     assert os.path.isfile(template_path), f"Template file not found: {template_path}"
     

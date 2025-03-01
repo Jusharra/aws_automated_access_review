@@ -3,4 +3,6 @@ pytest>=7.3.1
 pytest-mock>=3.10.0
 moto>=4.1.12
 cfn-lint>=0.79.5
-coverage>=7.2.7 
+coverage>=7.2.7
+flake8>=6.0.0
+black>=23.1.0 

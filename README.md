@@ -1,3 +1,5 @@
+[![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
+
 # AWS Access Review
 
 An open-source tool for automated AWS security posture assessment and reporting.
@@ -31,6 +33,46 @@ AWS Access Review is a lightweight, open-source tool deployable via a single Clo
    ```
    aws cloudformation deploy --template-file templates/access-review.yaml --stack-name aws-access-review --capabilities CAPABILITY_IAM --parameter-overrides RecipientEmail=your-email@example.com
    ```
+
+## Development
+
+### Setting Up a Development Environment
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ajy0127/aws_automated_access_review.git
+   cd aws_automated_access_review
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Code Style
+
+This project follows strict code style guidelines:
+
+- We use [Black](https://black.readthedocs.io/) for code formatting
+- We use [Flake8](https://flake8.pycqa.org/) for style enforcement
+- Maximum line length is set to 100 characters
+
+To check code style:
+```bash
+flake8 src/ tests/
+black --check src/ tests/
+```
+
+To automatically format code:
+```bash
+black src/ tests/
+```
 
 ## Testing
 
@@ -72,6 +114,18 @@ For more options:
 ```bash
 ./run_tests.sh --help
 ```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please ensure your code passes all tests and follows our code style guidelines before submitting a PR.
 
 ## License
 
@@ -144,10 +198,3 @@ A simple, zero-configuration tool that automatically analyzes AWS security postu
 6. Lambda generates CSV report of all findings
 7. Lambda uploads CSV to S3 and sends email with narrative and CSV attachment
 
-### 5. Success Metrics
-
-- Successful deployment rate > 95%
-- Detection of at least 95% of security issues found by native AWS services
-- Analysis completion time < 5 minutes for standard accounts
-- Positive GitHub feedback and community adoption
-- User feedback rating on AI narrative quality > 4/5 

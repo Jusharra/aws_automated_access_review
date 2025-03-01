@@ -1,214 +1,203 @@
 import json
 import boto3
 
+
+def get_ai_analysis(bedrock_client, findings):
+    """
+    Main entry point for getting AI analysis of security findings.
+    This function is called by the Lambda handler.
+
+    Args:
+        bedrock_client: Initialized Bedrock client
+        findings (list): List of security findings
+
+    Returns:
+        str: AI-generated narrative summary
+    """
+    try:
+        # Prepare the prompt for Claude model
+        prompt = prepare_prompt(findings)
+
+        # Call Bedrock with the Claude model
+        response = invoke_claude_model(bedrock_client, prompt)
+
+        # Extract and return the generated narrative
+        return extract_narrative_claude(response)
+    except Exception as e:
+        print(f"Error generating narrative with Bedrock: {str(e)}")
+        # Return a fallback narrative if Bedrock fails
+        return generate_fallback_narrative()
+
+
 def generate_narrative(findings):
     """
-    Generate a narrative summary of security findings using Amazon Bedrock's Titan model.
-    
+    Generate a narrative summary of security findings using Amazon Bedrock's Claude model.
+
     Args:
         findings (list): List of security findings
-        
+
     Returns:
         str: AI-generated narrative summary
     """
     # Initialize Bedrock client
-    bedrock = boto3.client('bedrock-runtime')
-    
-    # Prepare the prompt for Titan model
-    prompt = prepare_prompt(findings)
-    
-    try:
-        # Call Bedrock with the Titan model
-        response = invoke_titan_model(bedrock, prompt)
-        
-        # Extract and return the generated narrative
-        return extract_narrative(response)
-    except Exception as e:
-        print(f"Error generating narrative with Bedrock: {str(e)}")
-        # Return a fallback narrative if Bedrock fails
-        return generate_fallback_narrative(findings)
+    bedrock = boto3.client("bedrock-runtime")
+
+    # Call the main function
+    return get_ai_analysis(bedrock, findings)
+
 
 def prepare_prompt(findings):
     """
-    Prepare a prompt for the Titan model based on the security findings.
-    
+    Prepare a prompt for the Claude model based on the security findings.
+
     Args:
         findings (list): List of security findings
-        
+
     Returns:
-        str: Formatted prompt for the Titan model
+        str: Formatted prompt for the Claude model
     """
     # Count findings by severity
     severity_counts = {
-        'Critical': 0,
-        'High': 0,
-        'Medium': 0,
-        'Low': 0
+        "Critical": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+        "Informational": 0
     }
-    
+
     for finding in findings:
-        if finding['severity'] in severity_counts:
-            severity_counts[finding['severity']] += 1
-    
+        if finding.get("severity") in severity_counts:
+            severity_counts[finding.get("severity")] += 1
+
     # Group findings by category
     findings_by_category = {}
     for finding in findings:
-        category = finding['category']
+        category = finding.get("category", "Other")
         if category not in findings_by_category:
             findings_by_category[category] = []
         findings_by_category[category].append(finding)
-    
+
     # Create a summary of findings for the prompt
     findings_summary = []
     for category, category_findings in findings_by_category.items():
-        findings_summary.append(f"Category: {category}")
-        for finding in category_findings[:3]:  # Limit to 3 findings per category to keep prompt size reasonable
-            findings_summary.append(f"  - {finding['severity']}: {finding['description']}")
-        if len(category_findings) > 3:
-            findings_summary.append(f"  - ... and {len(category_findings) - 3} more {category} findings")
-    
-    # Construct the prompt
-    prompt = f"""
-You are a cybersecurity expert analyzing AWS security findings. Generate a concise, professional security report based on the following findings:
+        findings_summary.append(f"\nCategory: {category}")
+        # Sort by severity (Critical first)
+        severity_order = {
+            "Critical": 0,
+            "High": 1,
+            "Medium": 2,
+            "Low": 3,
+            "Informational": 4
+        }
+        sorted_findings = sorted(
+            category_findings,
+            key=lambda x: severity_order.get(x.get("severity", "Low"), 999)
+        )
 
-Summary:
-- Total findings: {len(findings)}
+        for finding in sorted_findings[:5]:  # Limit to 5 findings per category
+            summary = (
+                f"  - {finding.get('severity')}: {finding.get('description')} "
+                f"({finding.get('resource_type')}: {finding.get('resource_id')})"
+            )
+            findings_summary.append(summary)
+        if len(category_findings) > 5:
+            findings_summary.append(
+                f"  - ... and {len(category_findings) - 5} more {category} findings"
+            )
+
+    # Construct the prompt for Claude
+    prompt = f"""<findings>
+# AWS Security Findings Summary
+
+Total findings: {len(findings)}
 - Critical: {severity_counts['Critical']}
 - High: {severity_counts['High']}
 - Medium: {severity_counts['Medium']}
 - Low: {severity_counts['Low']}
+- Informational: {severity_counts['Informational']}
 
-Findings:
+## Findings by Category:
 {chr(10).join(findings_summary)}
-
-Your report should include:
-1. An executive summary of the security posture
-2. Analysis of the most critical findings
-3. Clear, actionable recommendations
-4. Compliance implications
-
-Format the report with clear headings and concise language suitable for both technical and non-technical stakeholders.
+</findings>
 """
-    
+
     return prompt
 
-def invoke_titan_model(bedrock, prompt):
+
+def invoke_claude_model(bedrock, prompt):
     """
-    Invoke the Amazon Titan model via Bedrock.
-    
+    Invoke the Amazon Claude model via Bedrock.
     Args:
-        bedrock: Bedrock client
-        prompt (str): The prompt to send to the model
-        
+        bedrock: Initialized Bedrock client
+        prompt: The prompt to send to the model
     Returns:
-        dict: The raw response from Bedrock
+        dict: The model's response
     """
     # Model parameters
-    model_id = "amazon.titan-text-express-v1"  # Use the appropriate model ID
-    
+    model_id = "anthropic.claude-v2"  # Use the appropriate model ID
     # Request body
     request_body = {
-        "inputText": prompt,
-        "textGenerationConfig": {
-            "maxTokenCount": 4096,
-            "temperature": 0.7,
-            "topP": 0.9,
-            "stopSequences": []
-        }
+        "prompt": (
+            "\n\nHuman: You are a cybersecurity expert analyzing AWS security findings. "
+            "Generate a concise, professional security report based on the following "
+            f"findings:\n\n{prompt}\n\n"
+            "Your report should include:\n"
+            "1. An executive summary of the security posture\n"
+            "2. Analysis of the most critical findings\n"
+            "3. Clear, actionable recommendations\n"
+            "4. Compliance implications\n\n"
+            "Format the report with clear headings and concise language suitable for both "
+            "technical and non-technical stakeholders.\n\n"
+            "Assistant: I'll analyze the findings and provide a comprehensive security "
+            "report.\n\n"
+        ),
+        "max_tokens_to_sample": 4096,
+        "temperature": 0.7,
+        "top_p": 0.9,
     }
-    
     # Invoke the model
     response = bedrock.invoke_model(
         modelId=model_id,
-        body=json.dumps(request_body)
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(request_body),
     )
-    
     # Parse and return the response
-    response_body = json.loads(response.get('body').read())
+    response_body = json.loads(response.get("body").read())
     return response_body
 
-def extract_narrative(response):
+
+def extract_narrative_claude(response):
     """
     Extract the generated narrative from the Bedrock response.
-    
     Args:
-        response (dict): The raw response from Bedrock
-        
+        response: The raw response from Bedrock
     Returns:
-        str: The extracted narrative text
+        str: The extracted narrative
     """
-    # Extract the generated text from the response
-    # The exact structure depends on the model used
     try:
-        # For Titan model
-        narrative = response.get('results', [{}])[0].get('outputText', '')
+        # For Claude model
+        narrative = response.get("completion", "")
         return narrative.strip()
-    except (KeyError, IndexError) as e:
-        print(f"Error extracting narrative from response: {str(e)}")
-        return "Error generating narrative. Please check the CSV report for findings."
+    except Exception as e:
+        print(f"Error extracting narrative from Bedrock response: {str(e)}")
+        return generate_fallback_narrative()
 
-def generate_fallback_narrative(findings):
+
+def generate_fallback_narrative():
     """
-    Generate a basic narrative without using Bedrock, as a fallback.
-    
-    Args:
-        findings (list): List of security findings
-        
+    Generate a basic narrative if the AI model fails.
     Returns:
         str: A basic narrative summary
     """
-    # Count findings by severity
-    severity_counts = {
-        'Critical': 0,
-        'High': 0,
-        'Medium': 0,
-        'Low': 0
-    }
-    
-    for finding in findings:
-        if finding['severity'] in severity_counts:
-            severity_counts[finding['severity']] += 1
-    
-    # Find the most critical findings
-    critical_findings = [f for f in findings if f['severity'] == 'Critical']
-    high_findings = [f for f in findings if f['severity'] == 'High']
-    
-    # Generate a basic narrative
-    narrative = f"""
-AWS ACCESS REVIEW REPORT
-
-EXECUTIVE SUMMARY
-An automated security review of your AWS environment has identified {len(findings)} potential security issues.
-This includes {severity_counts['Critical']} critical, {severity_counts['High']} high, {severity_counts['Medium']} medium, and {severity_counts['Low']} low severity findings.
-
-CRITICAL FINDINGS
-"""
-    
-    if critical_findings:
-        for finding in critical_findings[:3]:  # Limit to 3 critical findings
-            narrative += f"- {finding['resource_type']} ({finding['resource_id']}): {finding['description']}\n  Recommendation: {finding['recommendation']}\n\n"
-        if len(critical_findings) > 3:
-            narrative += f"- ... and {len(critical_findings) - 3} more critical findings\n\n"
-    else:
-        narrative += "No critical findings identified.\n\n"
-    
-    narrative += "HIGH SEVERITY FINDINGS\n"
-    
-    if high_findings:
-        for finding in high_findings[:3]:  # Limit to 3 high findings
-            narrative += f"- {finding['resource_type']} ({finding['resource_id']}): {finding['description']}\n  Recommendation: {finding['recommendation']}\n\n"
-        if len(high_findings) > 3:
-            narrative += f"- ... and {len(high_findings) - 3} more high severity findings\n\n"
-    else:
-        narrative += "No high severity findings identified.\n\n"
-    
-    narrative += """
-RECOMMENDATIONS
-1. Address all critical findings immediately
-2. Schedule remediation for high severity findings
-3. Review the complete CSV report for all findings
-
-For detailed findings, please see the attached CSV report.
-"""
-    
-    return narrative 
+    return (
+        "AWS Access Review Report\n\n"
+        "Due to technical limitations, a detailed AI analysis could not be generated. "
+        "Please refer to the CSV report for a complete list of findings.\n\n"
+        "Key Points:\n"
+        "1. Review all findings marked as Critical or High priority first\n"
+        "2. Address Medium priority findings as part of regular maintenance\n"
+        "3. Consider Low priority findings for long-term security improvements\n"
+        "4. Maintain regular security reviews and monitoring\n\n"
+        "For detailed findings and recommendations, please consult the attached CSV report."
+    )
