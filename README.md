@@ -2,6 +2,10 @@
 
 # AWS Automated Access Review
 
+> **For GRC Professionals & Portfolio Building**: This tool is designed for Governance, Risk, and Compliance (GRC) professionals to use in their organizations and for security engineers building their portfolios in test AWS accounts.
+>
+> **⚠️ DISCLAIMER**: This tool is provided as-is without warranty of any kind. While it has been tested in development environments, thorough validation is required before deploying in production. Always review the code, test in a non-production environment first, and ensure it meets your organization's security requirements and compliance standards.
+
 A comprehensive solution for automated AWS security posture assessment and reporting. This tool helps you maintain security best practices by regularly scanning your AWS environment for potential security issues and sending detailed reports.
 
 ## Features
