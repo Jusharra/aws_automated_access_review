@@ -1,27 +1,27 @@
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
 # AWS Automated Access Review
-## A GRC Portfolio Playground
+## A Professional IAM Security Automation Tool
 
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
 
-Hey GRC folks! This is your sandbox to mess around with AWS IAM security—think of it as a portfolio-building side quest. It's a work in progress, so dive in, play with it, and make it yours. You'll end up with cool IAM audit reports and some legit cloud skills to brag about. No pressure, just adventure!
+A comprehensive tool for automating AWS IAM security reviews. This project provides security professionals and GRC teams with automated access auditing capabilities to enhance cloud security posture and support compliance requirements. Use this tool to develop your portfolio while gaining practical cloud security skills.
 
 > **⚠️ DISCLAIMER**: This tool is provided as-is without warranty of any kind. While it has been tested in development environments, thorough validation is required before deploying in production. Always review the code, test in a non-production environment first, and ensure it meets your organization's security requirements and compliance standards.
 
-## Why Tinker With This?
+## Key Benefits
 
-- **Boost Your AWS Game**: Poke around IAM security without stress.
-- **Score Easy Wins**: Snag some reports to show off in interviews.
-- **Flex Your GRC Chops**: Spot access risks like a pro.
-- **Have Fun Automating**: Mess with Lambda and Bedrock—see what sticks!
+- **Enhanced Security Posture**: Systematically identify and remediate IAM security risks.
+- **Professional Reporting**: Generate comprehensive reports for stakeholders and auditors.
+- **GRC Expertise Development**: Build practical skills in governance, risk, and compliance.
+- **Cloud Automation Experience**: Gain hands-on experience with Lambda and Bedrock integration.
 
-## What You'll Learn
+## Skills Development Opportunities
 
-1. **IAM Security Basics**: Understand AWS access controls and common misconfigurations.
-2. **Compliance Reporting**: Create actionable security reports for stakeholders.
-3. **AI in GRC**: Use Amazon Bedrock to turn raw data into insights.
-4. **AWS Automation**: Deploy and manage a serverless security tool.
+1. **IAM Security Expertise**: Understand AWS access controls and identify common misconfigurations.
+2. **Compliance Reporting**: Create actionable security reports for stakeholders and auditors.
+3. **AI Integration**: Leverage Amazon Bedrock to transform raw security data into actionable insights.
+4. **Serverless Architecture**: Deploy and manage cloud-native security automation tools.
 
 ## About
 
@@ -42,23 +42,23 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
   2. Store reports as audit evidence
   3. Present to auditors when they sample specific months during assessment
 
-## Features (So Far!)
+## Core Features
 
-- **IAM Audit Goodies**: Catch MFA gaps and sketchy permissions in a CSV.
-- **Security Hub Peek**: Summarize findings—more to come!
-- **External Access Flags**: Spot public stuff with Access Analyzer.
-- **AI Magic**: Bedrock spins raw data into readable bits (still tweaking this).
-- **Email Surprises**: Reports hit your inbox—fancy, right?
-- **Scheduled Magic**: Set it and forget it—automatic checks when you want them.
+- **IAM Security Auditing**: Identify MFA gaps and excessive permissions through detailed CSV reports.
+- **Security Hub Integration**: Consolidate and summarize security findings from AWS Security Hub.
+- **External Access Analysis**: Detect public resource exposure using IAM Access Analyzer.
+- **AI-Powered Reporting**: Transform raw security data into readable, actionable insights with Amazon Bedrock.
+- **Automated Email Delivery**: Receive comprehensive security reports directly to designated inbox.
+- **Scheduled Execution**: Configure automatic security assessments at your preferred intervals.
 
-*Note*: This is a growing toolkit—expect quirks and cool updates!
+*Note*: This project is under active development with ongoing enhancements planned.
 
-## Sample Deliverables for Your Portfolio
+## Key Deliverables
 
-1. **IAM Compliance Report**: A CSV listing findings like "User sample-user lacks MFA" with severity ratings.
+1. **IAM Compliance Report**: Comprehensive CSV listing of security findings with severity ratings.
    - Example: See `examples/sample-access-report.csv`.
-2. **Executive Summary**: An emailed AI narrative explaining key risks and fixes.
-3. **Deployment Write-Up**: Document your setup process (SES verification, CloudFormation) as a case study.
+2. **Executive Summary**: AI-generated narrative analysis of key security risks and remediation recommendations.
+3. **Implementation Documentation**: Technical documentation of deployment architecture and configuration.
 
 ## Prerequisites
 
@@ -70,11 +70,11 @@ Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frame
   - Amazon SES (with verified email for receiving reports)
   - Amazon Bedrock (with access to Claude model)
 
-## Your First Adventure
+## Quick Start Guide
 
-1. **Email Warm-Up**: Verify an email in SES (5 mins, see [this guide](docs/email-setup.md)).
-2. **Launch It**: Fire off one command from [here](docs/deployment.md)—boom, it's live!
-3. **Grab a Prize**: Run a report and snag your first CSV + summary.
+1. **Email Configuration**: Verify an email address in SES (approximately 5 minutes, see [detailed guide](docs/email-setup.md)).
+2. **Deployment**: Execute the deployment command from [deployment documentation](docs/deployment.md) to provision resources.
+3. **Initial Report**: Generate your first security assessment report to receive a CSV and executive summary.
 
 ### Detailed Setup Steps
 
@@ -201,12 +201,12 @@ Available options:
 - `--bucket`: S3 bucket name for reports (optional)
 - `--profile`: AWS profile to use for credentials
 
-## Make It Your Own
+## Customization
 
-This is your playground—hack away!
-- **Tweak Reports**: Dive into `src/lambda/index.py` and add your spin.
-- **Fancy Up Emails**: Play with `deploy.sh` templates for fun.
-- **Share Your Story**: Blog your tweaks—level up your portfolio!
+Adapt the solution to your specific requirements:
+- **Report Customization**: Modify `src/lambda/index.py` to adjust security assessment criteria and outputs.
+- **Email Templates**: Enhance email delivery formats through the `deploy.sh` templates.
+- **Portfolio Enhancement**: Document your implementation and customizations to showcase your security automation expertise.
 
 ### Technical Customization Details
 
@@ -269,18 +269,18 @@ You can customize the tool by modifying the following files:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Join the Journey
+## Contributions Welcome
 
-Got ideas? Found a bug? Just wanna chat GRC adventures? Hit me up on [LinkedIn](https://www.linkedin.com/in/ajyawn/) or toss thoughts in GitHub Issues. This is a WIP—let's build it together!
+Have suggestions for improvements? Encountered an issue? Interested in collaborating on GRC automation? Connect on [LinkedIn](https://www.linkedin.com/in/ajyawn/) or submit your feedback through GitHub Issues. This project is under active development and contributions are appreciated.
 
 ## Authors
 
 See the AUTHORS.md file for a list of contributors to this project.
 
-## More GRC Portfolio Tools
+## Related Projects
 
-Level up with my other project:  
-- [security-hub-compliance-analyzer](https://github.com/ajy0127/security-hub-compliance-analyzer): Multi-framework compliance with SOC 2 and NIST 800-53 cATO monitoring.
+Explore additional cloud security automation tools:  
+- [Security Hub Compliance Analyzer](https://github.com/ajy0127/security-hub-compliance-analyzer): Multi-framework compliance monitoring tool with SOC 2 and NIST 800-53 cATO capabilities.
 
 ## Product Requirements Document
 
