@@ -8,22 +8,13 @@ Parameters:
     
   ScheduleExpression:
     Type: String
-    Default: 'rate(7 days)'
-    Description: "Schedule expression for running the access review (default: weekly)"
+    Default: 'rate(30 days)'
+    Description: "Schedule expression for running the access review (default: monthly)"
     
   ReportBucketName:
     Type: String
     Default: ''
     Description: Name for the S3 bucket to store reports (leave blank for auto-generated name)
-    
-  LambdaCodeBucket:
-    Type: String
-    Description: S3 bucket containing the Lambda deployment package
-    
-  LambdaCodeKey:
-    Type: String
-    Default: 'lambda_function.zip'
-    Description: S3 key for the Lambda deployment package
 
 Conditions:
   CreateBucketWithGeneratedName: !Equals [!Ref ReportBucketName, '']
@@ -181,8 +172,15 @@ Resources:
           REPORT_BUCKET: !Ref ReportBucket
           RECIPIENT_EMAIL: !Ref RecipientEmail
       Code: 
-        S3Bucket: !Ref LambdaCodeBucket
-        S3Key: !Ref LambdaCodeKey
+        ZipFile: |
+          # This is a placeholder. The actual code will be updated after stack creation
+          # using the AWS Lambda update-function-code API call.
+          def handler(event, context):
+              print("Placeholder Lambda function. This will be replaced by the actual code.")
+              return {
+                  'statusCode': 200,
+                  'body': 'Placeholder response'
+              }
 
   # CloudWatch Event Rule for scheduled execution
   ScheduledRule:
@@ -205,7 +203,7 @@ Resources:
       SourceArn: !GetAtt ScheduledRule.Arn
 
 Outputs:
-  ReportBucketName:
+  AccessReviewS3Bucket:
     Description: "Name of the S3 bucket storing access review reports"
     Value: !Ref ReportBucket
     
