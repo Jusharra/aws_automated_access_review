@@ -3,9 +3,9 @@ set -e
 
 # Configuration
 STACK_NAME="aws-access-review"
-REGION="us-east-1"  # Change to your preferred region
-RECIPIENT_EMAIL=""  # Set this to your email address
-SCHEDULE="rate(7 days)"  # Default: weekly
+REGION="us-east-1"  # Default region
+SCHEDULE="rate(30 days)"  # Default: run every 30 days
+EMAIL=""
 AWS_PROFILE=""  # AWS profile to use
 
 # Parse command line arguments
@@ -19,12 +19,12 @@ while [[ $# -gt 0 ]]; do
       REGION="$2"
       shift 2
       ;;
-    --email)
-      RECIPIENT_EMAIL="$2"
-      shift 2
-      ;;
     --schedule)
       SCHEDULE="$2"
+      shift 2
+      ;;
+    --email)
+      EMAIL="$2"
       shift 2
       ;;
     --profile)
@@ -38,9 +38,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Validate email
-if [ -z "$RECIPIENT_EMAIL" ]; then
-  echo "Error: Recipient email is required. Use --email to specify."
+# Check if email is provided
+if [ -z "$EMAIL" ]; then
+  echo "Error: Email is required. Please provide it with --email parameter."
   exit 1
 fi
 
@@ -51,39 +51,62 @@ if [ -n "$AWS_PROFILE" ]; then
   echo "Using AWS profile: $AWS_PROFILE"
 fi
 
-# Create a unique S3 bucket for Lambda code
-CODE_BUCKET="${STACK_NAME}-lambda-code-$(date +%s)"
-echo "Creating S3 bucket for Lambda code: $CODE_BUCKET"
-aws s3 mb "s3://$CODE_BUCKET" --region "$REGION" $AWS_CMD_PROFILE
+# Verify AWS credentials are valid
+echo "Verifying AWS credentials..."
+if ! aws sts get-caller-identity $AWS_CMD_PROFILE --region "$REGION" &>/dev/null; then
+  echo "Error: Unable to validate AWS credentials. Check your AWS configuration or profile."
+  exit 1
+fi
+echo "AWS credentials verified."
 
-# Upload Lambda code to S3
-echo "Uploading Lambda code to S3..."
-aws s3 cp lambda_function.zip "s3://$CODE_BUCKET/" --region "$REGION" $AWS_CMD_PROFILE
+# Prepare deployment files
+echo "Preparing deployment files..."
+rm -rf deployment
+mkdir -p deployment
 
-# Deploy CloudFormation stack
-echo "Deploying CloudFormation stack: $STACK_NAME"
+# Copy all Lambda files from src to deployment
+cp -r src/lambda/* deployment/
+
+# Package Lambda function
+echo "Creating Lambda deployment package..."
+cd deployment
+zip -r ../lambda_function.zip .
+cd ..
+
+# Create/Update the CloudFormation stack
+echo "Deploying CloudFormation stack '$STACK_NAME' to region '$REGION'..."
 aws cloudformation deploy \
   --template-file templates/access-review-real.yaml \
   --stack-name "$STACK_NAME" \
+  --parameter-overrides \
+    RecipientEmail="$EMAIL" \
+    ScheduleExpression="$SCHEDULE" \
   --capabilities CAPABILITY_IAM \
   --region "$REGION" \
-  $AWS_CMD_PROFILE \
-  --parameter-overrides \
-    RecipientEmail="$RECIPIENT_EMAIL" \
-    ScheduleExpression="$SCHEDULE" \
-    LambdaCodeBucket="$CODE_BUCKET" \
-    LambdaCodeKey="lambda_function.zip"
+  $AWS_CMD_PROFILE
 
-# Output stack information
-echo "Stack deployment initiated. Waiting for completion..."
-aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE || \
-aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE
+# Get the bucket name from the stack outputs
+echo "Getting S3 bucket name from CloudFormation stack..."
+BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE --query "Stacks[0].Outputs[?OutputKey=='AccessReviewS3Bucket'].OutputValue" --output text)
+
+echo "Getting Lambda function ARN from CloudFormation stack..."
+LAMBDA_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE --query "Stacks[0].Outputs[?OutputKey=='AccessReviewLambdaArn'].OutputValue" --output text)
+
+# Update Lambda function code
+echo "Updating Lambda function code..."
+aws lambda update-function-code \
+  --function-name "$LAMBDA_ARN" \
+  --zip-file fileb://lambda_function.zip \
+  --region "$REGION" \
+  $AWS_CMD_PROFILE
 
 echo "Deployment completed successfully!"
-echo "Stack outputs:"
-aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE --query "Stacks[0].Outputs" --output table
-
+echo "Lambda function: $LAMBDA_ARN"
+echo "S3 bucket for reports: $BUCKET_NAME"
+echo "Recipient email: $EMAIL"
+echo "Schedule: $SCHEDULE"
 echo ""
-echo "IMPORTANT: Verify your email address to receive reports"
-echo "An email verification message has been sent to $RECIPIENT_EMAIL"
-echo "You must click the verification link in that email to receive access review reports"
+echo "IMPORTANT: If this is a first-time deployment, you will need to verify your email address."
+echo "Check your inbox for a verification email from AWS SES and click the verification link."
+echo ""
+echo "You can run a report immediately with: ./scripts/run_report.sh --stack-name $STACK_NAME --region $REGION $([[ -n \"$AWS_PROFILE\" ]] && echo \"--profile $AWS_PROFILE\")"

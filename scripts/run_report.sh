@@ -35,29 +35,37 @@ if [ -n "$AWS_PROFILE" ]; then
   echo "Using AWS profile: $AWS_PROFILE"
 fi
 
-echo "Getting Lambda function name from CloudFormation stack..."
-LAMBDA_FUNCTION=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE --query "Stacks[0].Outputs[?OutputKey=='AccessReviewLambdaArn'].OutputValue" --output text)
+# Verify AWS credentials are valid
+echo "Verifying AWS credentials..."
+if ! aws sts get-caller-identity $AWS_CMD_PROFILE --region "$REGION" &>/dev/null; then
+  echo "Error: Unable to validate AWS credentials. Check your AWS configuration or profile."
+  exit 1
+fi
+echo "AWS credentials verified."
 
-if [ -z "$LAMBDA_FUNCTION" ]; then
-  echo "Error: Could not find Lambda function ARN in stack outputs."
-  echo "Make sure the stack '$STACK_NAME' exists and has been deployed successfully."
+# Get Lambda function name from CloudFormation stack
+echo "Getting Lambda function ARN from CloudFormation stack..."
+LAMBDA_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" $AWS_CMD_PROFILE --query "Stacks[0].Outputs[?OutputKey=='AccessReviewLambdaArn'].OutputValue" --output text)
+
+if [ -z "$LAMBDA_ARN" ]; then
+  echo "Error: Could not retrieve Lambda function ARN from stack outputs."
   exit 1
 fi
 
-echo "Found Lambda function: $LAMBDA_FUNCTION"
+echo "Found Lambda function: $LAMBDA_ARN"
 
-echo "Invoking Lambda function to run an immediate access review report..."
+# Invoke Lambda function
+echo "Invoking Lambda function to generate access review report..."
 aws lambda invoke \
-  --function-name "$LAMBDA_FUNCTION" \
+  --function-name "$LAMBDA_ARN" \
   --invocation-type Event \
-  --payload '{}' \
   --region "$REGION" \
   $AWS_CMD_PROFILE \
   /dev/null
 
 echo "Lambda function invoked successfully!"
-echo "The access review report will be generated and sent to your email shortly."
-echo "This process may take a few minutes to complete."
+echo "The access review report will be generated and sent to the configured email address."
+echo "This process may take several minutes to complete depending on the size of your AWS environment."
 echo ""
 echo "You can check the Lambda function logs in CloudWatch for progress:"
-echo "https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#logsV2:log-groups/log-group/aws/lambda/$(basename $LAMBDA_FUNCTION)" 
+echo "https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#logsV2:log-groups/log-group/aws/lambda/$(basename $LAMBDA_ARN)" 
