@@ -1,6 +1,7 @@
 """
 Module for collecting AWS CloudTrail-related security findings.
 """
+
 import datetime
 
 
@@ -179,4 +180,4 @@ def collect_cloudtrail_findings(cloudtrail, s3):
         )
 
     print(f"Collected {len(findings)} CloudTrail findings")
-    return findings 
+    return findings

@@ -1,6 +1,7 @@
 """
 Module for collecting AWS Organizations Service Control Policy (SCP) findings.
 """
+
 import json
 import datetime
 
@@ -215,4 +216,4 @@ def collect_scp_findings(org):
         )
 
     print(f"Collected {len(findings)} SCP findings")
-    return findings 
+    return findings

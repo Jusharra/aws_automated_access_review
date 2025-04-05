@@ -1,6 +1,7 @@
 """
 Module for collecting AWS IAM-related security findings.
 """
+
 import datetime
 
 
@@ -208,4 +209,4 @@ def collect_iam_findings(iam):
         )
 
     print(f"Collected {len(findings)} IAM findings")
-    return findings 
+    return findings

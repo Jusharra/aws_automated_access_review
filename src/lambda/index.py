@@ -4,6 +4,7 @@ This lambda collects security findings from various AWS services and generates a
 
 Version: 1.0.0
 """
+
 import json
 import boto3
 import os
@@ -114,11 +115,7 @@ def handler(event, context):
 
         # Send email with CSV attachment
         send_email_with_attachment(
-            ses,
-            recipient_email,
-            narrative,
-            csv_content,
-            csv_filename
+            ses, recipient_email, narrative, csv_content, csv_filename
         )
 
         return {

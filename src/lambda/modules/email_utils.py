@@ -1,6 +1,7 @@
 """
 Module for email related utilities to send AWS access review reports.
 """
+
 import email.mime.multipart
 import email.mime.text
 import email.mime.application
@@ -93,13 +94,13 @@ def verify_email_for_ses(ses_client, email_address):
     Verify an email address with SES if it's not already verified.
     """
     print(f"Checking SES verification status for {email_address}")
-    
+
     try:
         # Get verification status
         response = ses_client.get_identity_verification_attributes(
             Identities=[email_address]
         )
-        
+
         # Check if the email is already verified
         attributes = response.get("VerificationAttributes", {})
         if email_address in attributes:
@@ -109,14 +110,14 @@ def verify_email_for_ses(ses_client, email_address):
                 return True
             else:
                 print(f"Email {email_address} verification status: {status}")
-        
+
         # If not verified, send verification email
         print(f"Sending verification email to {email_address}")
         ses_client.verify_email_identity(EmailAddress=email_address)
         print(f"Verification email sent to {email_address}. Check inbox to verify.")
-        
+
         return False
     except Exception as e:
         error_msg = str(e)
         print(f"Error verifying email with SES: {error_msg}")
-        raise 
+        raise

@@ -1,6 +1,7 @@
 """
 Module for generating narrative summaries of AWS access review findings.
 """
+
 import datetime
 
 
@@ -129,4 +130,4 @@ def generate_fallback_narrative(findings):
         "4. For detailed findings, please see the attached CSV report\n"
     )
 
-    return narrative 
+    return narrative

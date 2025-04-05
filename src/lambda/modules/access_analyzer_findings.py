@@ -1,6 +1,7 @@
 """
 Module for collecting AWS IAM Access Analyzer findings.
 """
+
 import datetime
 
 
@@ -136,4 +137,4 @@ def collect_access_analyzer_findings(access_analyzer):
         )
 
     print(f"Collected {len(findings)} Access Analyzer findings")
-    return findings 
+    return findings

@@ -1,6 +1,7 @@
 """
 Module for collecting AWS Security Hub findings.
 """
+
 import datetime
 
 
@@ -109,4 +110,4 @@ def collect_securityhub_findings(securityhub):
         )
 
     print(f"Collected {len(findings)} Security Hub findings")
-    return findings 
+    return findings
