@@ -29,6 +29,8 @@ Unlike complex security dashboards that require constant monitoring, AWS Access 
 
 With single-click deployment and integration with native AWS services, you can start receiving detailed security reports in minutes without extensive setup or third-party dependencies.
 
+This tool is part of a larger initiative to empower GRC professionals in showcasing their practical AWS GRC engineering implementation skills. Visit the [GRC Portfolio Hub](https://github.com/ajy0127/grc_portfolio/tree/main) for more resources and projects focused on governance, risk, and compliance expertise development.
+
 ### Compliance Use Case: SOC 2 Type 2 Audits
 
 Perfect for GRC professionals managing SOC 2 Type 2 and similar compliance frameworks. The tool:
