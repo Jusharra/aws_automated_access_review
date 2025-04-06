@@ -25,11 +25,12 @@ The simplest way to deploy is using our deployment script:
 ```
 
 This single command:
-- Creates a CloudFormation stack with all necessary resources
+- Creates a CloudFormation stack using the `access-review-real.yaml` template
 - Sets up IAM permissions using least-privilege principles
 - Configures the Lambda function and scheduling
 - Prepares S3 storage for reports
 - Sets up email delivery through SES
+- Packages and updates the Lambda function code after stack creation
 
 ### Deployment Options
 

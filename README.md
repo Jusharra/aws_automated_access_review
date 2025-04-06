@@ -183,12 +183,21 @@ src/
 ├── tests/
 │   └── unit/                   # Unit tests for modules
 templates/
-└── access-review-real.yaml     # CloudFormation template
+├── access-review.yaml          # CloudFormation template with embedded Lambda code
+└── access-review-real.yaml     # Production template with separate Lambda deployment
 scripts/
 ├── deploy.sh                   # Deployment script
 ├── run_report.sh               # Run immediate report
 └── check_aws_creds.sh          # Verify AWS credentials
 ```
+
+### CloudFormation Templates
+
+The project includes two CloudFormation templates:
+
+1. **access-review.yaml**: Contains embedded Lambda code directly in the template. This is useful for demonstrations and small tests as it doesn't require a separate build/deploy step.
+
+2. **access-review-real.yaml**: Uses a placeholder Lambda function that will be updated after stack creation. This is the production deployment approach, where the Lambda code is separately packaged and updated using the AWS CLI. The deployment script uses this template.
 
 ## Running Reports
 
