@@ -23,30 +23,30 @@ Author: Security Engineering Team
 Last Updated: 2025-04-01
 """
 
-import datetime   # For calculating dates and creating timestamps
+import datetime  # For calculating dates and creating timestamps
 
 
 def collect_iam_findings(iam):
     """
     Collect IAM-related security findings from an AWS account.
-    
+
     This function performs several important security checks on IAM users, roles,
     and account-level settings to identify potential security risks.
-    
+
     Args:
         iam (boto3.client): A boto3 IAM client with appropriate permissions
-        
+
     Returns:
         list: A list of dictionaries, each representing a security finding with
               standardized fields for severity, description, remediation, etc.
-              
+
     Security Checks Performed:
         - Users with console access but no MFA (high severity)
         - Users with access keys older than 90 days (medium severity)
         - Users with administrator privileges (medium severity)
         - Unused IAM roles that might increase attack surface (low severity)
         - Weak or missing password policies (medium/high severity)
-        
+
     Compliance Frameworks:
         - CIS AWS Foundations Benchmark
         - AWS Well-Architected Framework Security Pillar
@@ -61,12 +61,14 @@ def collect_iam_findings(iam):
         print("  Retrieving all IAM users...")
         response = iam.list_users()
         users = response["Users"]  # Start with the first page of results
-        
+
         # If the results are truncated (more pages available), keep fetching
         while response.get("IsTruncated", False):
-            response = iam.list_users(Marker=response["Marker"])  # Get next page using marker
+            response = iam.list_users(
+                Marker=response["Marker"]
+            )  # Get next page using marker
             users.extend(response["Users"])  # Add these users to our list
-            
+
         print(f"  Found {len(users)} IAM users")
 
         # Check each user for security issues
@@ -90,16 +92,16 @@ def collect_iam_findings(iam):
             if login_profile_exists:
                 # User can log in to the console, now check if they have MFA enabled
                 mfa_response = iam.list_mfa_devices(UserName=username)
-                
+
                 # If MFADevices list is empty, no MFA devices are registered
                 if not mfa_response["MFADevices"]:
                     findings.append(
                         {
                             "id": f"IAM-001-{username}",  # Unique ID for this finding type + resource
-                            "category": "IAM",            # This is an IAM-related finding
-                            "severity": "High",           # High severity - this is a significant risk
+                            "category": "IAM",  # This is an IAM-related finding
+                            "severity": "High",  # High severity - this is a significant risk
                             "resource_type": "IAM User",  # The affected resource type
-                            "resource_id": username,      # The specific resource
+                            "resource_id": username,  # The specific resource
                             "description": (
                                 f"User {username} has console access but no MFA enabled"
                             ),
@@ -108,16 +110,22 @@ def collect_iam_findings(iam):
                             "detection_date": datetime.datetime.now().isoformat(),  # When we found this issue
                         }
                     )
-                    print(f"    FINDING: User {username} has console access without MFA")
+                    print(
+                        f"    FINDING: User {username} has console access without MFA"
+                    )
 
             # ==== CHECK 2: Access keys older than 90 days ====
             # Access keys should be rotated regularly to limit the impact of compromised credentials
             keys_response = iam.list_access_keys(UserName=username)
-            
+
             # Check each access key for the user
             for key in keys_response["AccessKeyMetadata"]:
-                key_id = key["AccessKeyId"]      # The access key ID (e.g., AKIAIOSFODNN7EXAMPLE)
-                key_created = key["CreateDate"]  # When the key was created (datetime object)
+                key_id = key[
+                    "AccessKeyId"
+                ]  # The access key ID (e.g., AKIAIOSFODNN7EXAMPLE)
+                key_created = key[
+                    "CreateDate"
+                ]  # When the key was created (datetime object)
 
                 # Calculate how old the key is in days
                 # We need to use timezone-aware datetime objects for correct calculation
@@ -143,17 +151,19 @@ def collect_iam_findings(iam):
                             "detection_date": datetime.datetime.now().isoformat(),
                         }
                     )
-                    print(f"    FINDING: Access key {key_id} for {username} is {key_age_days} days old")
+                    print(
+                        f"    FINDING: Access key {key_id} for {username} is {key_age_days} days old"
+                    )
 
             # ==== CHECK 3: Users with wide administrative permissions ====
             # Following the principle of least privilege, users should only have permissions
             # necessary for their job function. Administrator access should be limited.
-            
+
             # Get policies directly attached to this user (managed policies)
             attached_policies = iam.list_attached_user_policies(UserName=username)[
                 "AttachedPolicies"
             ]
-            
+
             # Look for policy names that suggest administrative privileges
             # This is a simple check that looks for keywords in policy names
             # A more thorough check would analyze policy contents and permissions
@@ -178,7 +188,9 @@ def collect_iam_findings(iam):
                             "detection_date": datetime.datetime.now().isoformat(),
                         }
                     )
-                    print(f"    FINDING: User {username} has admin policy: {policy['PolicyName']}")
+                    print(
+                        f"    FINDING: User {username} has admin policy: {policy['PolicyName']}"
+                    )
 
         # ==== CHECK 4: Unused IAM roles ====
         # Unused roles should be removed to reduce the attack surface
@@ -186,19 +198,19 @@ def collect_iam_findings(iam):
         print("  Retrieving all IAM roles...")
         response = iam.list_roles()
         roles = response["Roles"]  # Start with the first page of results
-        
+
         # If more pages exist, continue retrieving them
         while response.get("IsTruncated", False):
             response = iam.list_roles(Marker=response["Marker"])
             roles.extend(response["Roles"])
-            
+
         print(f"  Found {len(roles)} IAM roles")
         print("  Checking for unused roles...")
 
         # Examine each role to see if it's been used
         for role in roles:
             role_name = role["RoleName"]
-            
+
             # Skip AWS service-linked roles
             # These are managed by AWS services and shouldn't be removed manually
             if "service-role/" not in role["Path"] and not role_name.startswith(
@@ -211,14 +223,14 @@ def collect_iam_findings(iam):
                     .get("Role", {})
                     .get("RoleLastUsed", {})
                 )
-                
+
                 # If LastUsedDate is missing, the role has never been used
                 if "LastUsedDate" not in last_used_response:
                     findings.append(
                         {
                             "id": f"IAM-004-{role_name}",
                             "category": "IAM",
-                            "severity": "Low",    # Low severity - this is more of a hygiene issue
+                            "severity": "Low",  # Low severity - this is more of a hygiene issue
                             "resource_type": "IAM Role",
                             "resource_id": role_name,
                             "description": f"Role {role_name} appears to be unused",
@@ -238,12 +250,16 @@ def collect_iam_findings(iam):
         try:
             # Retrieve the current password policy for the account
             password_policy = iam.get_account_password_policy()["PasswordPolicy"]
-            
+
             # Check if the policy meets security best practices
             # Based on CIS AWS Foundations Benchmark recommendations
             if (
-                not password_policy.get("RequireUppercaseCharacters", False)  # Require uppercase
-                or not password_policy.get("RequireLowercaseCharacters", False)  # Require lowercase
+                not password_policy.get(
+                    "RequireUppercaseCharacters", False
+                )  # Require uppercase
+                or not password_policy.get(
+                    "RequireLowercaseCharacters", False
+                )  # Require lowercase
                 or not password_policy.get("RequireSymbols", False)  # Require symbols
                 or not password_policy.get("RequireNumbers", False)  # Require numbers
                 or password_policy.get("MinimumPasswordLength", 0) < 14  # Min 14 chars
@@ -266,8 +282,10 @@ def collect_iam_findings(iam):
                         "detection_date": datetime.datetime.now().isoformat(),
                     }
                 )
-                print("    FINDING: Password policy does not meet security best practices")
-                
+                print(
+                    "    FINDING: Password policy does not meet security best practices"
+                )
+
         except iam.exceptions.NoSuchEntityException:
             # This exception means no password policy has been set
             # Having no policy at all is a high severity issue
@@ -294,11 +312,12 @@ def collect_iam_findings(iam):
         # 3. Continue with the rest of the security checks
         error_msg = str(e)
         print(f"Error collecting IAM findings: {error_msg}")
-        
+
         # Include a stack trace for better debugging
         import traceback
+
         print(f"Error stack trace: {traceback.format_exc()}")
-        
+
         # Add an error finding so it appears in the report
         findings.append(
             {

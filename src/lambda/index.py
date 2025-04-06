@@ -16,38 +16,54 @@ Author: Security Engineering Team
 Last Updated: 2025-04-01
 """
 
-import json         # For JSON serialization/deserialization
-import boto3        # AWS SDK for Python
-import os           # For environment variable access
-import datetime     # For timestamps and date formatting
+import json  # For JSON serialization/deserialization
+import boto3  # AWS SDK for Python
+import os  # For environment variable access
+import datetime  # For timestamps and date formatting
 
 # Import modules for specific functionality
 # Each module handles a different aspect of security findings collection
-from modules.iam_findings import collect_iam_findings                     # IAM user and role security checks
-from modules.scp_findings import collect_scp_findings                     # Service Control Policy analysis
-from modules.securityhub_findings import collect_securityhub_findings     # AWS Security Hub integration
-from modules.access_analyzer_findings import collect_access_analyzer_findings  # External access findings
-from modules.cloudtrail_findings import collect_cloudtrail_findings       # Audit log analysis
-from modules.narrative import generate_ai_narrative                       # AI summary generation with Bedrock
-from modules.reporting import generate_csv_report, upload_to_s3           # Report generation and storage
-from modules.email_utils import send_email_with_attachment, verify_email_for_ses  # Email delivery
+from modules.iam_findings import (
+    collect_iam_findings,
+)  # IAM user and role security checks
+from modules.scp_findings import collect_scp_findings  # Service Control Policy analysis
+from modules.securityhub_findings import (
+    collect_securityhub_findings,
+)  # AWS Security Hub integration
+from modules.access_analyzer_findings import (
+    collect_access_analyzer_findings,
+)  # External access findings
+from modules.cloudtrail_findings import (
+    collect_cloudtrail_findings,
+)  # Audit log analysis
+from modules.narrative import (
+    generate_ai_narrative,
+)  # AI summary generation with Bedrock
+from modules.reporting import (
+    generate_csv_report,
+    upload_to_s3,
+)  # Report generation and storage
+from modules.email_utils import (
+    send_email_with_attachment,
+    verify_email_for_ses,
+)  # Email delivery
 
 
 def handler(event, context):
     """
     Main handler for the AWS Access Review Lambda function.
-    
+
     This is the entry point when the Lambda is triggered either by:
     1. CloudWatch scheduled events (for regular reports)
     2. Manual invocation (for on-demand reports)
     3. CLI testing (via the test_lambda.py script)
-    
+
     Args:
         event (dict): The event data that triggered this Lambda function
             - Can contain 'force_real_execution' flag for testing
             - Can override recipient_email for testing
         context (LambdaContext): Runtime information provided by AWS Lambda
-    
+
     Returns:
         dict: Response with status code and execution result message
     """
@@ -70,10 +86,10 @@ def handler(event, context):
 
     # Initialize all AWS service clients we'll need
     # Using boto3 clients is the recommended AWS SDK approach for Lambda functions
-    
+
     # IAM client for checking users, roles, and policies
     iam = boto3.client("iam")
-    
+
     # Organizations client for checking SCPs - wrapped in try/except because
     # Organizations service might not be enabled in all accounts
     try:
@@ -102,10 +118,10 @@ def handler(event, context):
         access_analyzer = None  # Set to None so we can check later if it's available
 
     # These services should always be available in all accounts
-    cloudtrail = boto3.client("cloudtrail")        # For audit trail analysis
-    bedrock = boto3.client("bedrock-runtime")      # For AI narrative generation
-    s3 = boto3.client("s3")                        # For storing report files
-    ses = boto3.client("ses")                      # For sending email reports
+    cloudtrail = boto3.client("cloudtrail")  # For audit trail analysis
+    bedrock = boto3.client("bedrock-runtime")  # For AI narrative generation
+    s3 = boto3.client("s3")  # For storing report files
+    ses = boto3.client("ses")  # For sending email reports
 
     # Verify the recipient email in SES if needed
     # Amazon SES requires email verification before sending
@@ -120,7 +136,7 @@ def handler(event, context):
 
     try:
         # ===== STEP 1: Collect findings from multiple AWS security services =====
-        
+
         # Collect IAM findings (users, roles, policies)
         # This should always work since IAM is a core service
         print("Collecting IAM findings...")
@@ -197,24 +213,22 @@ def handler(event, context):
                 "timestamp": timestamp,
                 "bucket": report_bucket,
                 "key": csv_key,
-                "findingsCount": len(findings)
-            }
+                "findingsCount": len(findings),
+            },
         }
 
     except Exception as e:
         # Comprehensive error handling
         error_msg = str(e)
         print(f"Error in AWS Access Review: {error_msg}")
-        
+
         # Log the error stack trace for debugging
         import traceback
+
         print(f"Error stack trace: {traceback.format_exc()}")
-        
+
         return {
-            "statusCode": 500, 
+            "statusCode": 500,
             "body": json.dumps(f"Error: {error_msg}"),
-            "errorDetails": {
-                "message": error_msg,
-                "type": type(e).__name__
-            }
+            "errorDetails": {"message": error_msg, "type": type(e).__name__},
         }

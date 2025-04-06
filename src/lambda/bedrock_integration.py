@@ -21,21 +21,21 @@ Author: Security Engineering Team
 Last Updated: 2025-04-01
 """
 
-import json    # For parsing and formatting API requests/responses
-import boto3   # AWS SDK for Python to interact with Amazon Bedrock
+import json  # For parsing and formatting API requests/responses
+import boto3  # AWS SDK for Python to interact with Amazon Bedrock
 
 
 def get_ai_analysis(bedrock_client, findings):
     """
     Main entry point for getting AI analysis of security findings.
     This function is called by the Lambda handler to generate a narrative summary.
-    
+
     This function orchestrates the entire AI analysis process:
-    1. Organizes findings data into an AI-friendly format 
+    1. Organizes findings data into an AI-friendly format
     2. Sends the data to the AI model
     3. Processes the AI response
     4. Handles any errors gracefully with fallback content
-    
+
     Args:
         bedrock_client: Initialized Bedrock client with appropriate permissions
         findings (list): List of security findings in standardized format
@@ -63,15 +63,16 @@ def get_ai_analysis(bedrock_client, findings):
         narrative = extract_narrative_claude(response)
         print("AI narrative generation successful")
         return narrative
-        
+
     except Exception as e:
         # Error handling - if anything goes wrong, log it and use fallback content
         print(f"Error generating narrative with Bedrock: {str(e)}")
-        
+
         # Include a stack trace for better debugging
         import traceback
+
         print(f"Error stack trace: {traceback.format_exc()}")
-        
+
         # Return a fallback narrative if Bedrock fails
         # This ensures the user still gets a useful report even if AI fails
         print("Using fallback narrative due to error")
@@ -81,7 +82,7 @@ def get_ai_analysis(bedrock_client, findings):
 def generate_narrative(findings):
     """
     Generate a narrative summary of security findings using Amazon Bedrock's Claude model.
-    
+
     This is a convenience function that handles Bedrock client initialization
     and then calls the main analysis function. Most code should call this function
     rather than working with the lower-level functions directly.
@@ -91,13 +92,13 @@ def generate_narrative(findings):
 
     Returns:
         str: AI-generated narrative summary that can be included in reports
-    
+
     Example usage:
         from bedrock_integration import generate_narrative
-        
+
         # After collecting security findings
         narrative = generate_narrative(all_findings)
-        
+
         # Include narrative in email or report
         send_email(recipient, subject, narrative, attachment)
     """
@@ -112,14 +113,14 @@ def generate_narrative(findings):
 def prepare_prompt(findings):
     """
     Prepare a prompt for the Claude model based on the security findings.
-    
+
     This function transforms raw security findings into a structured format that
     helps the AI model understand and analyze the data effectively. The prompt
     includes:
     - Statistical summary (counts by severity)
     - Categorized findings with details
     - XML tags to help the AI identify the findings section
-    
+
     Args:
         findings (list): List of security findings from various AWS services
                         Each finding should be a dictionary with fields like
@@ -132,9 +133,9 @@ def prepare_prompt(findings):
     # Initialize counters for each severity level
     severity_counts = {
         "Critical": 0,  # Immediate action required
-        "High": 0,      # High priority issues
-        "Medium": 0,    # Important but less urgent
-        "Low": 0,       # Minor issues
+        "High": 0,  # High priority issues
+        "Medium": 0,  # Important but less urgent
+        "Low": 0,  # Minor issues
         "Informational": 0,  # Awareness only
     }
 
@@ -149,23 +150,23 @@ def prepare_prompt(findings):
     for finding in findings:
         # Use "Other" as default category if not specified
         category = finding.get("category", "Other")
-        
+
         # Initialize category list if this is first finding of this type
         if category not in findings_by_category:
             findings_by_category[category] = []
-            
+
         # Add this finding to its category group
         findings_by_category[category].append(finding)
 
     # Step 3: Create a formatted summary of findings for the prompt
     # We'll organize them by category, with the most severe findings first
     findings_summary = []
-    
+
     # Process each category of findings
     for category, category_findings in findings_by_category.items():
         # Add category header
         findings_summary.append(f"\nCategory: {category}")
-        
+
         # Define severity order for sorting (Critical first)
         severity_order = {
             "Critical": 0,
@@ -174,7 +175,7 @@ def prepare_prompt(findings):
             "Low": 3,
             "Informational": 4,
         }
-        
+
         # Sort findings within this category by severity
         sorted_findings = sorted(
             category_findings,
@@ -189,7 +190,7 @@ def prepare_prompt(findings):
                 f"({finding.get('resource_type')}: {finding.get('resource_id')})"
             )
             findings_summary.append(summary)
-            
+
         # If there are more findings than we showed, add a count of remaining ones
         if len(category_findings) > 5:
             findings_summary.append(
@@ -220,17 +221,17 @@ Total findings: {len(findings)}
 def invoke_claude_model(bedrock, prompt):
     """
     Invoke the Amazon Claude model via Bedrock API.
-    
+
     This function handles the API communication with Amazon Bedrock,
     configuring the request parameters and processing the response.
-    
+
     Args:
         bedrock: Initialized Bedrock client with appropriate permissions
         prompt: The structured prompt containing security findings
-        
+
     Returns:
         dict: The raw model's response as a Python dictionary
-        
+
     Note:
         This function configures specific parameters for the Claude model:
         - Temperature: Controls randomness (0.7 balances creativity and consistency)
@@ -240,7 +241,7 @@ def invoke_claude_model(bedrock, prompt):
     # Step 1: Select model and set parameters
     # Using Claude v2 for comprehensive text generation capabilities
     model_id = "anthropic.claude-v2"  # Amazon Bedrock model identifier
-    
+
     # Step 2: Construct the complete prompt with instructions
     # The prompt follows Claude's required Human/Assistant format
     # and includes specific instructions for security report generation
@@ -250,84 +251,82 @@ def invoke_claude_model(bedrock, prompt):
             "\n\nHuman: You are a cybersecurity expert analyzing AWS security findings. "
             "Generate a concise, professional security report based on the following "
             f"findings:\n\n{prompt}\n\n"
-            
             # Specific instructions for report structure
             "Your report should include:\n"
             "1. An executive summary of the security posture\n"
             "2. Analysis of the most critical findings\n"
             "3. Clear, actionable recommendations\n"
             "4. Compliance implications\n\n"
-            
             # Style guidance for the report
             "Format the report with clear headings and concise language suitable for both "
             "technical and non-technical stakeholders.\n\n"
-            
             # Claude's expected assistant prefix
             "Assistant: I'll analyze the findings and provide a comprehensive security "
             "report.\n\n"
         ),
         # Model configuration parameters
         "max_tokens_to_sample": 4096,  # Maximum response length (roughly 3000 words)
-        "temperature": 0.7,            # Balances creativity and consistency
-        "top_p": 0.9,                  # Controls diversity of word selection
+        "temperature": 0.7,  # Balances creativity and consistency
+        "top_p": 0.9,  # Controls diversity of word selection
     }
-    
+
     # Step 3: Call the Bedrock API
     print(f"Calling Bedrock API with model: {model_id}")
     response = bedrock.invoke_model(
-        modelId=model_id,              # Which model to use
-        contentType="application/json", # Format of our request
-        accept="application/json",      # Format we want for response
+        modelId=model_id,  # Which model to use
+        contentType="application/json",  # Format of our request
+        accept="application/json",  # Format we want for response
         body=json.dumps(request_body),  # Convert request to JSON string
     )
-    
+
     # Step 4: Process the response
     # The response body is a stream that needs to be read and parsed
     response_body = json.loads(response.get("body").read())
     print("Successfully received response from Bedrock")
-    
+
     return response_body
 
 
 def extract_narrative_claude(response):
     """
     Extract the generated narrative from the Bedrock response.
-    
+
     This function handles the extraction of the useful narrative text
     from the raw API response and performs any necessary formatting.
-    
+
     Args:
         response: The raw response from Bedrock API as a Python dictionary
-        
+
     Returns:
         str: The extracted narrative text, ready for inclusion in reports
-        
+
     Note:
         If extraction fails for any reason, this function will fall back
-        to a basic pre-written narrative to ensure the report generation 
+        to a basic pre-written narrative to ensure the report generation
         process isn't blocked.
     """
     try:
         # For Claude model, the generated text is in the "completion" field
         # We strip any extra whitespace to ensure clean formatting
         narrative = response.get("completion", "")
-        
+
         # Apply any additional formatting or post-processing here if needed
         # For example, we might want to add a title, fix formatting issues, etc.
-        
+
         return narrative.strip()
-        
+
     except Exception as e:
         # Handle any errors during extraction
         print(f"Error extracting narrative from Bedrock response: {str(e)}")
-        
+
         # Log the actual response for debugging
         print(f"Problematic response: {response}")
-        
+
         # Include a stack trace for better debugging
         import traceback
+
         print(f"Error stack trace: {traceback.format_exc()}")
-        
+
         # Fall back to a pre-written narrative
         return generate_fallback_narrative()
 
@@ -335,16 +334,16 @@ def extract_narrative_claude(response):
 def generate_fallback_narrative():
     """
     Generate a basic narrative if the AI model fails.
-    
+
     This function provides a safety net when AI generation fails,
     ensuring that users still receive a useful report even if
     Bedrock is unavailable or returns an error.
-    
+
     Returns:
         str: A basic narrative summary with general security guidance
     """
     print("Generating fallback narrative due to AI processing failure")
-    
+
     # Return a professionally formatted basic report
     # This includes general guidance that applies to most AWS environments
     return (
