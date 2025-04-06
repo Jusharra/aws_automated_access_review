@@ -97,17 +97,15 @@ def collect_iam_findings(iam):
                 if not mfa_response["MFADevices"]:
                     findings.append(
                         {
-                            "id": f"IAM-001-{username}",  # Unique ID for this finding type + resource
+                            "id": f"IAM-001-{username}",  # Unique ID for this finding
                             "category": "IAM",  # This is an IAM-related finding
                             "severity": "High",  # High severity - this is a significant risk
                             "resource_type": "IAM User",  # The affected resource type
                             "resource_id": username,  # The specific resource
-                            "description": (
-                                f"User {username} has console access but no MFA enabled"
-                            ),
+                            "description": f"User {username} has console access but no MFA enabled",
                             "recommendation": "Enable MFA for all users with console access",
-                            "compliance": "CIS 1.2, AWS Well-Architected",  # Relevant compliance frameworks
-                            "detection_date": datetime.datetime.now().isoformat(),  # When we found this issue
+                            "compliance": "CIS 1.2, AWS Well-Architected",  # Compliance frameworks
+                            "detection_date": datetime.datetime.now().isoformat(),  # Detection time
                         }
                     )
                     print(
@@ -142,17 +140,15 @@ def collect_iam_findings(iam):
                             "severity": "Medium",  # Medium severity - risk increases with age
                             "resource_type": "IAM Access Key",
                             "resource_id": f"{username}/{key_id}",  # Format: username/key-id
-                            "description": (
-                                f"Access key {key_id} for user {username} is "
-                                f"{key_age_days} days old"
-                            ),
+                            "description": f"Access key {key_id} for user {username}"
+                            f" is {key_age_days} days old",
                             "recommendation": "Rotate access keys at least every 90 days",
                             "compliance": "CIS 1.4, AWS Well-Architected",
                             "detection_date": datetime.datetime.now().isoformat(),
                         }
                     )
                     print(
-                        f"    FINDING: Access key {key_id} for {username} is {key_age_days} days old"
+                        f"    FINDING: Access key {key_id} for {username} is {key_age_days} days"
                     )
 
             # ==== CHECK 3: Users with wide administrative permissions ====
@@ -176,13 +172,11 @@ def collect_iam_findings(iam):
                         {
                             "id": f"IAM-003-{username}",
                             "category": "IAM",
-                            "severity": "Medium",  # Medium severity - depends on actual user activity
+                            "severity": "Medium",  # Medium severity - depends on user activity
                             "resource_type": "IAM User",
                             "resource_id": username,
-                            "description": (
-                                f"User {username} has potentially wide privileges via "
-                                f'policy {policy["PolicyName"]}'
-                            ),
+                            "description": f"User {username} has potentially wide privileges"
+                            f' via policy {policy["PolicyName"]}',
                             "recommendation": "Apply least privilege principle to IAM users",
                             "compliance": "CIS 1.16, AWS Well-Architected",
                             "detection_date": datetime.datetime.now().isoformat(),

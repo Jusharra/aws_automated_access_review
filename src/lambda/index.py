@@ -1,6 +1,7 @@
 """
 AWS Access Review Lambda function for automated security auditing.
-This lambda collects security findings from various AWS services and generates a comprehensive report.
+This lambda collects security findings from various AWS services and generates a comprehensive
+report.
 
 The main workflow:
 1. Collect findings from multiple AWS services (IAM, Organizations, Security Hub, etc.)
