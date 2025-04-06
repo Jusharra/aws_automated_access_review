@@ -1,4 +1,8 @@
 [![Tests](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml/badge.svg)](https://github.com/ajy0127/aws_automated_access_review/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CFN Lint](https://img.shields.io/badge/CFN-Lint-blue.svg)](https://github.com/aws-cloudformation/cfn-lint)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # AWS Automated Access Review
 ## A Professional IAM Security Automation Tool
