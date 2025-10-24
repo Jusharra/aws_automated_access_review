@@ -5,8 +5,8 @@ set -e
 STACK_NAME="aws-access-review"
 REGION="us-east-1"  # Default region
 SCHEDULE="rate(30 days)"  # Default: run every 30 days
-EMAIL=""
-AWS_PROFILE=""  # AWS profile to use
+EMAIL="qjgoree@gmail.com"
+AWS_PROFILE="grc_engineer"  # AWS profile to use
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

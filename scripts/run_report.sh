@@ -4,7 +4,7 @@ set -e
 # Configuration
 STACK_NAME="aws-access-review"
 REGION="us-east-1"  # Default region
-AWS_PROFILE=""  # AWS profile to use
+AWS_PROFILE="grc_engineer"  # AWS profile to use
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
